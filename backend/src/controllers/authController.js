@@ -8,43 +8,52 @@ import { generateForgetPasswordEmailTemplate } from "../utils/emailTemplate.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import crypto from 'crypto';
 
-
 export const registerUser = asyncErrorHandler(async (req, res, next) => {
 
-    try {
-        const { name, email, password, branch } = req.body;
+    const { name, email, password, branch } = req.body;
 
-        if (!name || !email || !password || !branch) {
-            return next(new ErrorHandler(400, 'All fields are required. '));
-        }
-        const existingUser = await userModel.findOne({ email, accountVerified: true })
-        if (existingUser) {
-            return next(new ErrorHandler(400, 'Email already in use. Please use a different email address.'));
-        }
-        const registertionAttemptByUser = await userModel.findOne({ email, accountVerified: false })
-
-        if (registertionAttemptByUser > 5) {
-            return next(new ErrorHandler(400, 'Too many registration attempts. Please try again later.'));
-
-        }
-        const hasedPassword = await bcrypt.hash(password, 10);
-        const user = await userModel.create({
-            name,
-            email,
-            branch,
-            password: hasedPassword
-        });
-        const verificationCode = await user.generateVerificationCode();
-        await user.save();
-        sendVerificationCode(verificationCode, email, res);
-
-
-
-    } catch (error) {
-        next(error);
-
+    if (!name || !email || !password || !branch) {
+        return next(new ErrorHandler(400, "All fields are required."));
     }
-})
+
+    const existingUser = await userModel.findOne({ 
+        email, 
+        accountVerified: true 
+    });
+
+    if (existingUser) {
+        return next(new ErrorHandler(400, "Email already in use."));
+    }
+
+    const attempts = await userModel.countDocuments({ 
+        email, 
+        accountVerified: false 
+    });
+
+    if (attempts > 5) {
+        return next(new ErrorHandler(400, "Too many registration attempts."));
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await userModel.create({
+        name,
+        email,
+        branch,
+        password: hashedPassword,
+    });
+
+    const verificationCode = user.generateVerificationCode();
+    await user.save({ validateBeforeSave: false });
+
+    await sendVerificationCode(verificationCode, email); // no res
+
+    return res.status(201).json({
+        success: true,
+        message: "OTP sent successfully"
+    });
+});
+
 export const verifyOTP = asyncErrorHandler(async (req, res, next) => {
     //  Extract email and OTP from request body
     const { email, otp } = req.body;
