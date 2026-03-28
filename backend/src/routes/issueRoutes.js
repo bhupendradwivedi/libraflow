@@ -3,12 +3,12 @@ import { authMiddleware } from '../middlewares/authMiddleware.js';
 import { roleMiddleware } from '../middlewares/roleMiddleware.js';
 import { 
     recordIssueBooks, 
-    getPendingRequests, 
     approveBookRequest, 
     rejectBookRequest,
     requestReturnBook,      
     approveReturnRequest,    
-    getMyBookRequests
+    getAllPendingRequestsAdmin,
+    getPendingRequests
 } from '../controllers/issueController.js';
 
 
@@ -24,12 +24,12 @@ router.put('/book/return-request/:id', authMiddleware, requestReturnBook);
 
 
 // 3. Student apni sari requests (Pending/Approved) dekh sake
-router.get('/my-requests', authMiddleware,getPendingRequests );
+router.get('/my-requests', authMiddleware,getPendingRequests);
 
 // ================= ADMIN ROUTES =================
 
 // 4. Pending Issue Requests dekhna (The Queue)
-router.get('/admin/requests', authMiddleware, roleMiddleware('admin'),getMyBookRequests );
+router.get('/admin/requests', authMiddleware, roleMiddleware('admin'),getAllPendingRequestsAdmin );
 
 // 5. Issue Request ko Approve karna
 router.put('/admin/request/approve/:requestId', authMiddleware, roleMiddleware('admin'), approveBookRequest);

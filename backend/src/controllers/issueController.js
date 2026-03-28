@@ -7,108 +7,141 @@ import mongoose from "mongoose";
 import { issueRequestModel } from '../models/issueRequestModel.js';
 import { calculateFine } from "../utils/calculateFine.js";
 
+
 export const recordIssueBooks = asyncErrorHandler(async (req, res, next) => {
     const bookId = req.params.id;
-    
     const userId = req.user?._id;
 
     if (!userId) {
-        return next(new ErrorHandler(401, "User not authenticated. Please login again."));
+        return next(new ErrorHandler(401, "User not authenticated."));
     }
 
-    try {
-        // ID Format validation
-        if (!mongoose.Types.ObjectId.isValid(bookId)) {
-            return next(new ErrorHandler(400, "Invalid Book ID format."));
-        }
-
-        const user = await userModel.findById(userId);
-
-        // Check Admin approval
-        if (user.adminApproved !== "approved") {
-            return next(new ErrorHandler(403, "Account not approved by Admin. Request denied."));
-        }
-
-        // 2. Duplicate Check: Yahan 'student' field use karein (Schema ke mutabiq)
-        const existingRequest = await issueRequestModel.findOne({
-            student: userId, 
-            book: bookId,
-            status: { $in: ['pending', 'approved'] }
-        });
-
-        if (existingRequest) {
-            return next(new ErrorHandler(400, "A request for this book is already active."));
-        }
-
-        // 3. CREATE: Yahan 'student' key hi use karni hai
-        let issueRequest = await issueRequestModel.create({
-            student: userId, // <--- YE SABSE IMPORTANT HAI
-            book: bookId,
-            status: 'pending',
-            requestDate: new Date(),
-        });
-
-        // 4. POPULATE: Response ke liye data fetch karein
-        issueRequest = await issueRequestModel.findById(issueRequest._id)
-            .populate("book", "title author") 
-            .populate("student", "name email"); // <--- Yahan bhi 'student'
-
-        res.status(201).json({
-            success: true,
-            message: "Issue request submitted to Admin.",
-            issueRequest
-        });
-
-    } catch (error) {
-        console.error("System Error (recordIssueBooks):", error);
-        next(error);
+    // 1. Fetch User & ID Validation
+    if (!mongoose.Types.ObjectId.isValid(bookId)) {
+        return next(new ErrorHandler(400, "Invalid Book ID format."));
     }
+
+    const user = await userModel.findById(userId);
+
+    // 2. Admin Approval Check
+    if (user.adminApproved !== "approved") {
+        return next(new ErrorHandler(403, "Account not approved by Admin."));
+    }
+
+    
+    
+    if (user.activeBorrowCount >= 6) {
+        return next(new ErrorHandler(400, "Library limit reached. You can only have 6 active books."));
+    }
+
+    // 4. Duplicate Check (Already fixed by you)
+    const existingRequest = await issueRequestModel.findOne({
+        student: userId, 
+        book: bookId,
+        status: { $in: ['pending', 'approved', 'return_requested'] } 
+    });
+
+    if (existingRequest) {
+        return next(new ErrorHandler(400, "A request for this book is already active or issued."));
+    }
+
+    // 5. Check if Book is in Stock
+    const book = await bookModel.findById(bookId);
+    if (!book || book.quantity < 1) {
+        return next(new ErrorHandler(400, "Asset out of stock."));
+    }
+
+    // 6. CREATE: Submit request
+    let issueRequest = await issueRequestModel.create({
+        student: userId, 
+        book: bookId,
+        status: 'pending',
+        requestDate: new Date(),
+    });
+
+    // 7. POPULATE & SEND
+    issueRequest = await issueRequestModel.findById(issueRequest._id)
+        .populate("book", "title author") 
+        .populate("student", "name email");
+
+    res.status(201).json({
+        success: true,
+        message: "Request submitted. Waiting for Admin approval.",
+        issueRequest
+    });
 });
 
-export const getMyBookRequests = async (req, res) => {
+export const getAllPendingRequestsAdmin = async (req, res) => {
     try {
-        const studentId = req.user._id;
-
-        // Fetch requests for the logged-in student and populate book details
-        const requests = await issueRequestModel.find({ user: studentId })
+        // Admin ko sabki pending requests dikhni chahiye
+        const requests = await issueRequestModel.find({ status: 'pending' })
             .populate({
                 path: 'book',
-                select: 'title author description price image category isbn dueDate issueDate' 
+                select: 'title author image isbn'
+            })
+            .populate({
+                path: 'student', 
+                select: 'name rollNumber branch year semester'
             })
             .sort({ createdAt: -1 });
 
-        // Map through requests to calculate real-time fine
-        const updatedRequests = requests.map(request => {
-            let currentFine = 0;
-            
-            // Calculate fine if the book is approved/issued and not yet returned
-            if (request.status === 'approved' && request.dueDate) {
-                currentFine = calculateFine({
-                    dueDate: request.dueDate,
-                    returnDate: new Date(), // Fine calculated up to current date
-                    finePerDay: 5,         // Default fine rate
-                    maxFine: 1000          // Maximum fine cap
-                });
-            }
-            
-            return { ...request._doc, currentFine };
-        });
-
         res.status(200).json({
             success: true,
-            count: updatedRequests.length,
-            requests: updatedRequests
+            count: requests.length,
+            requests
         });
-
     } catch (error) {
-        console.error("System Error (getMyBookRequests):", error);
-        res.status(500).json({
-            success: false,
-            message: "Failed to fetch book requests.",
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// export const getMyBookRequests = async (req, res) => {
+//     try {
+//         const studentId = req.user._id;
+
+//         const requests = await issueRequestModel.find({ student: studentId })
+//             .populate({
+//                 path: 'book', 
+//                 select: 'title author description price image category isbn' 
+//             })
+//             .populate({
+//                 path: 'student',
+//                 select: 'name email rollNumber branch year semester'
+//             })
+//             .sort({ createdAt: -1 });
+
+//         const updatedRequests = requests.map(request => {
+//             let currentFine = 0;
+            
+//             if (request.status === 'approved') {
+//                 const targetDate = request.dueDate || new Date(new Date(request.createdAt).getTime() + 14 * 24 * 60 * 60 * 1000);
+                
+//                 currentFine = calculateFine({
+//                     dueDate: targetDate,
+//                     returnDate: new Date(),
+//                     finePerDay: 5,
+//                     maxFine: 1000
+//                 });
+//             }
+            
+//             return { ...request._doc, currentFine };
+//         });
+
+//         res.status(200).json({
+//             success: true,
+//             count: updatedRequests.length,
+//             requests: updatedRequests
+//         });
+
+//     } catch (error) {
+//         console.error("System Error (getMyBookRequests):", error);
+//         res.status(500).json({
+//             success: false,
+//             message: "Failed to fetch book requests.",
+//             error: error.message
+//         });
+//     }
+// };
 
 export const getPendingRequests = asyncErrorHandler(async (req, res, next) => {
    
@@ -246,73 +279,63 @@ export const requestReturnBook = asyncErrorHandler(async (req, res, next) => {
         message: "Return request admin ko bhej di gayi hai. Book library mein jama karein."
     });
 });
+
 export const approveReturnRequest = asyncErrorHandler(async (req, res, next) => {
     const issueId = req.params.id;
-
-    if (!mongoose.Types.ObjectId.isValid(issueId)) {
-        return next(new ErrorHandler(400, "Invalid Issue ID format."));
-    }
-
+    
     // 1. Fetch the Issue record
     const issueRecord = await issueModel.findById(issueId);
 
-    // Check if record exists and is in the correct state
-    if (!issueRecord || (issueRecord.status !== "return_requested" && issueRecord.status !== "approved")) {
-        return next(new ErrorHandler(404, "Active or Pending return request not found."));
-    }
+    if (!issueRecord) return next(new ErrorHandler(404, "Issue not found"));
 
     const today = new Date();
 
-    // 2. Calculate Fine (Using your utility)
+   
     const fineAmount = calculateFine({
         dueDate: issueRecord.dueDate,
         returnDate: today,
-        finePerDay: 5,
-        graceDays: 1,
-        maxFine: 500,
+        finePerDay: 5,  
+        graceDays: 0,    
+        maxFine: 1000,  
         chargePartialDay: true
     });
 
-    // 3. Update Issue Record Status
+    // 3. Update Issue Record Status & Fine Data
+    issueRecord.status = "returned";
     issueRecord.returnDate = today;
-    issueRecord.fine = fineAmount;
-    issueRecord.status = "returned"; 
+    issueRecord.fine = fineAmount; 
     await issueRecord.save();
 
-    // 4. ATOMIC: Inventory Increase (+1 Book)
-    await bookModel.findByIdAndUpdate(
-        issueRecord.book,
-        { $inc: { quantity: 1 } }
-    );
+    // 4. ATOMIC: Book Quantity Increase (+1)
+    await bookModel.findByIdAndUpdate(issueRecord.book, { $inc: { quantity: 1 } });
 
-    // 5. ATOMIC: Decrement User's Borrow Count
-    await userModel.findOneAndUpdate(
-        { _id: issueRecord.user, activeBorrowCount: { $gt: 0 } },
-        { $inc: { activeBorrowCount: -1 } }
-    );
+    // 5. ATOMIC: User activeBorrowCount Decrease (-1)
+    await userModel.findByIdAndUpdate(issueRecord.user, { $inc: { activeBorrowCount: -1 } });
 
-    // 6. FIXED: Update the specific book in User's 'issueBooks' array
-    // Bug Fix: Match by issueId instead of bookId to be 100% precise
-    await userModel.updateOne(
+    // 6. User Profile Sync (Remove from issueBooks array)
+    await userModel.findByIdAndUpdate(
+        issueRecord.user,
         { 
-            _id: issueRecord.user, 
-            "issueBooks.issueId": issueRecord._id // Precise match using Issue ID
-        },
-        { 
-            $set: { 
-                "issueBooks.$.returned": true,
-                "issueBooks.$.returnDate": today 
+            $pull: { 
+                issueBooks: { 
+                    $or: [
+                        { issueId: issueRecord._id }, 
+                        { bookId: issueRecord.book }  
+                    ]
+                } 
             } 
         }
     );
 
-    res.status(200).json({
-        success: true,
-        message: `Asset received. Total fine processed: ₹${fineAmount}`,
-        fine: fineAmount
+    // 7. Success Response with Fine Details
+    res.status(200).json({ 
+        success: true, 
+        message: fineAmount > 0 
+            ? `Asset received. Late fine of ₹${fineAmount} applied.` 
+            : "Asset received successfully with zero fine.",
+        fine: fineAmount 
     });
 });
-
 
 
 

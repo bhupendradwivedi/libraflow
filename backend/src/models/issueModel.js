@@ -10,7 +10,7 @@ const issueSchema = new mongoose.Schema({
     name: { type: String },
     email: { type: String },
     branch: { type: String },
-    
+
     price: { type: Number },
 
     book: {
@@ -21,12 +21,12 @@ const issueSchema = new mongoose.Schema({
 
     issueDate: {
         type: Date,
-        default: null, // Request ke time null rahega
+        default: null, 
     },
 
     dueDate: {
         type: Date,
-        default: null, // Approval ke time calculate hoga
+        default: null, 
     },
 
     returnDate: {
@@ -41,14 +41,14 @@ const issueSchema = new mongoose.Schema({
 
     status: {
         type: String,
-        // Yahan 'pending' aur 'rejected' add kiya hai
+       
         enum: ["pending", "approved", "rejected", "return_requested", "returned"],
-        default: "pending" // Pehla status hamesha pending hoga
+        default: "pending" 
     }
 
 }, { timestamps: true });
 
-// Queue aur unique requests ke liye indexes sahi hain
+
 issueSchema.index({ status: 1, createdAt: 1 });
 issueSchema.index({ user: 1, book: 1, status: 1 });
 

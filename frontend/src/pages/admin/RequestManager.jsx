@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import issueService from '../../services/IssueServices.js';
 import { 
-  Check, X, Clock, BookOpen, Search, GraduationCap, 
-  Calendar, Layers, Timer, Hash, CheckCircle2, User, ArrowRightLeft
+  Check, X, BookOpen, Search, GraduationCap, 
+  Timer, User, ArrowRightLeft, CheckCircle2 
 } from 'lucide-react'; 
 import toast from 'react-hot-toast';
 import Loader from '../../components/common/Loader';
@@ -16,7 +16,7 @@ const RequestManager = () => {
     try {
       setLoading(true);
       const data = await issueService.getAdminPendingRequests();
-      if (data.success) setRequests(data.requests);
+      if (data.success) setRequests(data.requests || []);
     } catch (error) {
       toast.error("Failed to sync action queue");
     } finally {
@@ -29,22 +29,19 @@ const RequestManager = () => {
   const filteredRequests = requests.filter((req) => {
     const query = searchTerm.toLowerCase();
     return (
-      req.user?.name?.toLowerCase().includes(query) || 
+      req.student?.name?.toLowerCase().includes(query) || 
       req.book?.title?.toLowerCase().includes(query) ||
-      req.user?.rollNumber?.toLowerCase().includes(query)
+      req.student?.rollNumber?.toLowerCase().includes(query)
     );
   });
 
   const handleAction = async (id, action, name) => {
-    const confirmMsg = `Confirm: Do you want to ${action} request for ${name}?`;
-    if (!window.confirm(confirmMsg)) return;
-
+    if (!window.confirm(`Confirm: ${action} request for ${name}?`)) return;
     try {
       if (action === 'approve') await issueService.approveIssueRequest(id);
       else if (action === 'reject') await issueService.rejectIssueRequest(id);
-      else if (action === 'return') await issueService.approveIssueRequest(id); // Adjust method if backend differs
       
-      toast.success(`Action: Request ${action}ed`);
+      toast.success(`Request ${action}ed successfully`);
       fetchAllRequests(); 
     } catch (error) {
       toast.error(error.message || "Operation failed");
@@ -55,11 +52,9 @@ const RequestManager = () => {
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700 font-sans px-4 pb-20">
-      
-      {/* --- REFINED HEADER SECTION --- */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 border-b-2 border-slate-200 pb-8">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none font-heading">
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">
             Action <span className="text-[#14D3BC]">Queue</span>
           </h1>
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] mt-3 flex items-center gap-2">
@@ -67,57 +62,47 @@ const RequestManager = () => {
           </p>
         </div>
 
-        <div className="relative w-full lg:w-96 group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#14D3BC] transition-colors" size={16} />
+        <div className="relative w-full lg:w-96">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input 
             type="text"
-            placeholder="SEARCH BY STUDENT OR BOOK ID..."
+            placeholder="SEARCH BY STUDENT OR BOOK..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-4 py-3 border-2 border-slate-100 focus:border-[#14D3BC] outline-none font-bold text-[10px] uppercase tracking-widest transition-all bg-slate-50 focus:bg-white"
+            className="w-full pl-11 pr-4 py-3 border-2 border-slate-100 focus:border-[#14D3BC] outline-none font-bold text-[10px] uppercase tracking-widest transition-all bg-slate-50 focus:bg-white rounded-none"
           />
         </div>
       </div>
 
-      {/* --- REQUESTS GRID --- */}
       {filteredRequests.length === 0 ? (
-        <div className="bg-white border-2 border-dashed border-slate-200 py-32 text-center rounded-lg">
+        <div className="bg-white border-2 border-dashed border-slate-200 py-32 text-center">
           <CheckCircle2 className="mx-auto text-slate-200 mb-4" size={48} />
-          <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">Queue Cleared • No Pending Actions</p>
+          <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">Queue Cleared • No Actions</p>
         </div>
       ) : (
         <div className="grid gap-6">
           {filteredRequests.map((req) => (
             <div key={req._id} className="bg-white border-2 border-slate-900 flex flex-col lg:flex-row items-stretch shadow-[8px_8px_0px_0px_rgba(15,23,42,0.05)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all">
-              
-              {/* Type Indicator Side Panel */}
-              <div className={`w-2 shrink-0 ${req.status === 'return_requested' ? 'bg-[#14D3BC]' : 'bg-orange-500'}`} />
-
+              <div className="w-2 shrink-0 bg-orange-500" />
               <div className="flex-1 p-6 flex flex-col lg:flex-row justify-between items-center gap-8">
-                {/* Identity Info */}
                 <div className="flex items-start gap-6 flex-1 w-full">
                   <div className="w-14 h-14 bg-slate-100 border-2 border-slate-900 flex items-center justify-center text-slate-900 shrink-0">
                     <User size={24} />
                   </div>
-                  
                   <div className="space-y-3 w-full">
-                    <div>
-                      <h4 className="font-black text-slate-900 uppercase tracking-tighter text-xl leading-none font-heading">
-                        {req.user?.name}
-                      </h4>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[9px] font-black text-slate-400 font-mono">#{req.user?.rollNumber}</span>
-                        <div className="h-1 w-1 bg-slate-200 rounded-full" />
-                        <p className="text-slate-900 font-black text-[10px] uppercase tracking-tight flex items-center gap-1">
-                          <BookOpen size={12} className="text-[#14D3BC]" /> {req.book?.title}
-                        </p>
-                      </div>
+                    <h4 className="font-black text-slate-900 uppercase tracking-tighter text-xl leading-none">
+                      {req.student?.name || "Unknown"}
+                    </h4>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-[9px] font-black text-slate-400 font-mono">#{req.student?.rollNumber}</span>
+                      <p className="text-slate-900 font-black text-[10px] uppercase tracking-tight flex items-center gap-1">
+                        <BookOpen size={12} className="text-[#14D3BC]" /> {req.book?.title}
+                      </p>
                     </div>
-                    
-                    {/* Academic Metadata */}
                     <div className="flex flex-wrap gap-3 pt-2">
                       <div className="flex items-center gap-2 text-[9px] font-black text-slate-500 uppercase tracking-wider">
-                        <GraduationCap size={12} className="text-[#14D3BC]" /> {req.user?.branch}
+                        <GraduationCap size={12} className="text-[#14D3BC]" /> 
+                        {req.student?.branch} | Sem {req.student?.semester}
                       </div>
                       <div className="flex items-center gap-2 text-[9px] font-black text-slate-500 uppercase tracking-wider font-mono">
                         <Timer size={12} className="text-[#14D3BC]" /> {new Date(req.createdAt).toLocaleDateString('en-GB')}
@@ -126,44 +111,9 @@ const RequestManager = () => {
                   </div>
                 </div>
 
-                {/* Status Badge */}
-                <div className="flex flex-col items-center min-w-[150px]">
-                  <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-2">Operation Mode</p>
-                  <div className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest border-2 ${
-                    req.status === 'return_requested' 
-                    ? 'border-[#14D3BC] text-[#14D3BC]' 
-                    : 'border-orange-500 text-orange-600'
-                  }`}>
-                    {req.status === 'return_requested' ? 'Asset Return' : 'Issue Request'}
-                  </div>
-                </div>
-
-                {/* Control Actions */}
                 <div className="flex items-center gap-3 w-full lg:w-auto">
-                  {req.status === 'return_requested' ? (
-                    <button 
-                      onClick={() => handleAction(req._id, 'return', req.user?.name)}
-                      className="w-full lg:px-8 py-4 bg-slate-900 text-[#14D3BC] border-2 border-slate-900 font-black text-[10px] uppercase tracking-widest hover:bg-[#14D3BC] hover:text-white transition-all shadow-[4px_4px_0px_0px_rgba(20,211,188,1)]"
-                    >
-                      Process Return
-                    </button>
-                  ) : (
-                    <>
-                      <button 
-                        onClick={() => handleAction(req._id, 'reject', req.user?.name)} 
-                        className="p-4 border-2 border-slate-200 text-slate-400 hover:border-rose-600 hover:text-rose-600 transition-all"
-                        title="Reject Request"
-                      >
-                        <X size={18} />
-                      </button>
-                      <button 
-                        onClick={() => handleAction(req._id, 'approve', req.user?.name)} 
-                        className="flex-1 lg:px-8 py-4 bg-slate-900 text-white border-2 border-slate-900 font-black text-[10px] uppercase tracking-widest hover:bg-[#14D3BC] hover:border-[#14D3BC] transition-all shadow-[4px_4px_0px_0px_rgba(20,211,188,1)]"
-                      >
-                        Approve Issue
-                      </button>
-                    </>
-                  )}
+                  <button onClick={() => handleAction(req._id, 'reject', req.student?.name)} className="p-4 border-2 border-slate-200 text-slate-400 hover:border-rose-600 hover:text-rose-600 transition-all bg-white"><X size={18} /></button>
+                  <button onClick={() => handleAction(req._id, 'approve', req.student?.name)} className="flex-1 lg:px-8 py-4 bg-slate-900 text-white border-2 border-slate-900 font-black text-[10px] uppercase tracking-widest hover:bg-[#14D3BC] shadow-[4px_4px_0px_0px_rgba(20,211,188,1)] transition-all">Approve Issue</button>
                 </div>
               </div>
             </div>
