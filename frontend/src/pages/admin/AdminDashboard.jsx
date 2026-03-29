@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import userService from '../../services/userService.js';
 import { 
   Users, Clock, AlertCircle, Plus, 
-  UserPlus, ArrowUpRight, ShieldCheck, TrendingUp,
-  ArrowRight, Activity, Zap, Layers
+  UserPlus, TrendingUp, LayoutDashboard, 
+  ChevronRight, Bell, Receipt
 } from 'lucide-react';
 import Loader from '../../components/common/Loader.jsx';
 
@@ -32,119 +32,148 @@ const AdminDashboard = () => {
     fetchStats();
   }, []);
 
-  const statsCards = [
-    { title: "Total Students", value: stats.totalStudents, icon: <Users size={20}/>, color: "text-[#14D3BC]" },
-    { title: "Active Loans", value: stats.activeUsers, icon: <Activity size={20}/>, color: "text-slate-900" },
-    { title: "Pending Task", value: stats.pendingVerifications, icon: <AlertCircle size={20}/>, color: "text-orange-500" },
-    { title: "Fine Revenue", value: `₹${stats.totalFine}`, icon: <TrendingUp size={20}/>, color: "text-[#14D3BC]" },
-  ];
-
-  if (loading) return <Loader fullScreen={true} message="Syncing SVPC Command Center..." />;
+  if (loading) return <Loader fullScreen={true} message="Syncing Dashboard..." />;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] animate-in fade-in duration-700 font-sans">
-      <div className="max-w-7xl mx-auto p-6 lg:p-10 space-y-12">
-        
-        {/* --- REFINED HEADER --- */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b-2 border-slate-200 pb-10">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-[#14D3BC] font-black text-[10px] uppercase tracking-[0.4em]">
-              <div className="h-2 w-2 bg-[#14D3BC] rounded-full animate-pulse" /> System Operational
-            </div>
-            <h1 className="text-5xl font-black text-slate-900 tracking-tighter uppercase leading-none font-heading">
-              Console.<span className="text-[#14D3BC]">Core</span>
-            </h1>
-            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
-              <ShieldCheck size={14} className="text-slate-900" /> Administrative Intelligence Unit
-            </p>
+    <div className="min-h-screen w-full bg-[#F8FAFC] flex flex-col font-sans text-slate-900">
+      
+      {/* 1. TOP HEADER - Fixed for scrolling */}
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-teal-600 rounded-lg flex items-center justify-center text-white shadow-sm">
+            <LayoutDashboard size={20} />
           </div>
-          
-          <div className="flex gap-4">
-             <div className="text-right border-r-2 border-slate-100 pr-4">
-                <p className="text-[9px] font-black text-slate-300 uppercase italic">Status</p>
-                <p className="text-[11px] font-black text-[#14D3BC] uppercase">Optimized</p>
-             </div>
-             <div className="text-right">
-                <p className="text-[9px] font-black text-slate-300 uppercase italic">Session</p>
-                <p className="text-[11px] font-black text-slate-900 uppercase">Active</p>
-             </div>
+          <h1 className="text-xl font-bold tracking-tight text-slate-800">
+            Admin<span className="text-teal-600">Core</span>
+          </h1>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <button className="relative p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors">
+            <Bell size={20} />
+            <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-rose-500 rounded-full border border-white"></span>
+          </button>
+          {/* User Profile Avatar - Desktop/Mobile Consistency */}
+          <div className="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 overflow-hidden">
+             <img src="https://ui-avatars.com/api/?name=Admin&background=0D9488&color=fff" alt="admin" />
           </div>
         </div>
+      </header>
 
-        {/* --- STATS GRID: CLEAN & PRO --- */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {statsCards.map((item, idx) => (
-            <div key={idx} className="bg-white border-2 border-slate-900 p-8 shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-default group">
-              <div className="flex justify-between items-start mb-6">
-                <div className={`${item.color} group-hover:scale-110 transition-transform`}>
-                  {item.icon}
-                </div>
-                <Layers size={14} className="text-slate-100 group-hover:text-slate-900" />
+      {/* 2. SCROLLABLE CONTENT */}
+      <main className="flex-1 p-5 sm:p-8 max-w-7xl mx-auto w-full space-y-8">
+        
+        {/* WELCOME SECTION */}
+        <section className="flex justify-between items-end">
+          <div>
+            <h2 className="text-2xl font-extrabold text-slate-900">Dashboard Overview</h2>
+            <p className="text-slate-500 text-sm">Real-time library analytics and management.</p>
+          </div>
+        </section>
+
+        {/* STATS GRID */}
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {[
+            { label: "Students", val: stats.totalStudents, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+            { label: "Active", val: stats.activeUsers, icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
+            { label: "Pending", val: stats.pendingVerifications, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+            { label: "Revenue", val: `₹${stats.totalFine}`, icon: Receipt, color: "text-violet-600", bg: "bg-violet-50" },
+          ].map((stat, i) => (
+            <div key={i} className={`bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col items-start transition-all hover:shadow-md hover:border-teal-100`}>
+              <div className={`${stat.bg} ${stat.color} p-2.5 rounded-2xl mb-4`}>
+                <stat.icon size={20} />
               </div>
-              <h3 className="text-4xl font-black text-slate-900 tracking-tighter mb-1 font-mono">{item.value}</h3>
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{item.title}</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
+              <p className={`text-2xl font-black text-slate-900 mt-1`}>{stat.val}</p>
             </div>
           ))}
-        </div>
+        </section>
 
-        {/* --- OPERATIONS: POWER PANEL --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Action Hub */}
-          <div className="lg:col-span-8 space-y-6">
-            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter font-heading border-l-4 border-[#14D3BC] pl-4">
-              Asset <span className="text-[#14D3BC]">Control</span>
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <button 
-                onClick={() => navigate('/admin/add-book')}
-                className="p-8 bg-slate-900 border-2 border-slate-900 hover:bg-[#14D3BC] hover:border-[#14D3BC] text-white transition-all group flex flex-col gap-10 shadow-[8px_8px_0px_0px_rgba(20,211,188,0.2)]"
-              >
-                <Plus size={28} strokeWidth={3} className="group-hover:rotate-90 transition-transform text-[#14D3BC] group-hover:text-white" />
-                <div className="text-left">
-                  <span className="block font-black uppercase text-xl tracking-tighter font-heading">Register Book</span>
-                  <span className="text-[9px] text-slate-400 group-hover:text-white font-black uppercase tracking-widest">Inventory Expansion</span>
-                </div>
-              </button>
-
-              <button 
-                onClick={() => navigate('/admin/students-list')}
-                className="p-8 bg-white border-2 border-slate-900 hover:bg-slate-900 text-slate-900 hover:text-white transition-all group flex flex-col gap-10 shadow-[8px_8px_0px_0px_rgba(15,23,42,0.05)]"
-              >
-                <UserPlus size={28} strokeWidth={3} className="text-[#14D3BC]" />
-                <div className="text-left">
-                  <span className="block font-black uppercase text-xl tracking-tighter font-heading">Identity Audit</span>
-                  <span className="text-[9px] text-slate-400 group-hover:text-slate-400 font-black uppercase tracking-widest">User Verification</span>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Issue Queue Quick Access */}
-          <div className="lg:col-span-4 flex flex-col">
-            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter font-heading border-l-4 border-slate-900 pl-4 mb-6">
-              Live <span className="text-[#14D3BC]">Queue</span>
-            </h2>
-            <button 
-              onClick={() => navigate('/admin/request-manager')}
-              className="flex-1 bg-[#14D3BC] p-10 text-white flex flex-col justify-between border-2 border-slate-900 shadow-[10px_10px_0px_0px_rgba(15,23,42,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all group min-h-[300px]"
-            >
-              <div className="flex justify-between items-start">
-                <Clock size={48} strokeWidth={2.5} />
-                <div className="bg-slate-900 p-2 rounded-full group-hover:rotate-45 transition-transform">
-                  <ArrowUpRight size={20} className="text-[#14D3BC]" />
-                </div>
+        {/* PRIMARY ACTION: REQUEST MANAGER */}
+        <section>
+          <button 
+            onClick={() => navigate('/admin/request-manager')}
+            className="w-full bg-slate-900 rounded-[2rem] p-6 text-white flex justify-between items-center active:scale-[0.99] transition-all shadow-xl shadow-slate-200 hover:bg-slate-800 group"
+          >
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 bg-teal-500 rounded-2xl flex items-center justify-center shadow-lg shadow-teal-500/20 group-hover:rotate-6 transition-transform">
+                <Clock size={28} />
               </div>
               <div className="text-left">
-                <p className="text-5xl font-black tracking-tighter uppercase leading-[0.8] font-heading">Manage<br/>Requests</p>
-                <p className="text-[9px] font-black uppercase tracking-[0.3em] mt-6 text-slate-900">Process Pending Approvals</p>
+                <h3 className="text-lg font-bold">Request Manager</h3>
+                <p className="text-slate-400 text-sm">Review pending book issues & returns</p>
               </div>
-            </button>
-          </div>
+            </div>
+            <div className="w-10 h-10 rounded-full border border-slate-700 flex items-center justify-center group-hover:bg-teal-500 group-hover:border-teal-500 transition-all">
+              <ChevronRight size={20} />
+            </div>
+          </button>
+        </section>
 
-        </div>
-      </div>
+        {/* SECONDARY ACTIONS GRID */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <button 
+            onClick={() => navigate('/admin/add-book')}
+            className="group bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center gap-6 active:bg-slate-50 transition-all hover:shadow-md"
+          >
+            <div className="w-16 h-16 bg-teal-50 text-teal-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Plus size={32} />
+            </div>
+            <div className="text-left">
+              <span className="block font-black text-lg uppercase tracking-tight text-slate-800">Add Book</span>
+              <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Inventory Management</span>
+            </div>
+          </button>
+
+          <button 
+            onClick={() => navigate('/admin/students-list')}
+            className="group bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center gap-6 active:bg-slate-50 transition-all hover:shadow-md"
+          >
+            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <UserPlus size={32} />
+            </div>
+            <div className="text-left">
+              <span className="block font-black text-lg uppercase tracking-tight text-slate-800">Users List</span>
+              <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Student Database</span>
+            </div>
+          </button>
+        </section>
+
+        {/* LOGS SECTION */}
+        <section className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm">
+            <div className="flex justify-between items-center mb-6">
+               <div className="flex items-center gap-3">
+                  <div className="w-1.5 h-6 bg-teal-500 rounded-full"></div>
+                  <h4 className="text-sm font-black uppercase tracking-widest text-slate-700">Recent Activity</h4>
+               </div>
+               <TrendingUp size={18} className="text-teal-500" />
+            </div>
+            <div className="space-y-4">
+              {[
+                { m: "New student registration: Rahul Kumar", t: "2m ago" },
+                { m: "Book 'Atomic Habits' issued to ID: #204", t: "15m ago" },
+                { m: "Inventory updated: 5 new arrivals", t: "1h ago" }
+              ].map((log, i) => (
+                <div key={i} className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0 transition-colors hover:bg-slate-50/50 px-2 rounded-xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-2 h-2 rounded-full bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.6)]" />
+                    <p className="text-sm text-slate-600 font-medium">{log.m}</p>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tabular-nums">{log.t}</span>
+                </div>
+              ))}
+            </div>
+        </section>
+
+      </main>
+
+      {/* 3. SIMPLE FOOTER */}
+      <footer className="py-8 text-center border-t border-slate-100">
+        <p className="text-[11px] font-bold text-slate-300 uppercase tracking-[0.2em]">
+          Powered by AdminCore v2.0
+        </p>
+      </footer>
+
     </div>
   );
 };

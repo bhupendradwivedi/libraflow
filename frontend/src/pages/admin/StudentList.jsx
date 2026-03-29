@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Search, ShieldCheck, CheckCircle2, 
-  UserCheck, GraduationCap, Mail, Trash2, Hash, BookOpen,
-  ArrowRight, BookMarked
+  UserCheck, Trash2, Mail, BookOpen,
+  ArrowRight, BookMarked, Users, Clock, AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import userService from '../../services/userService';
@@ -34,17 +34,17 @@ const StudentList = () => {
     if (window.confirm(`Approve ${name}?`)) {
       try {
         const res = await userService.approveStudent(id); 
-        if (res.success) { toast.success("Approved"); fetchStudents(); }
-      } catch (error) { toast.error("Failed"); }
+        if (res.success) { toast.success("Approved successfully"); fetchStudents(); }
+      } catch (error) { toast.error("Approval failed"); }
     }
   };
 
   const handleDelete = async (id, name) => {
-    if (window.confirm(`Delete ${name}?`)) {
+    if (window.confirm(`Delete ${name}? Data cannot be recovered!`)) {
       try {
         const res = await userService.deleteStudent(id); 
-        if (res.success) { toast.success("Deleted"); fetchStudents(); }
-      } catch (error) { toast.error("Failed"); }
+        if (res.success) { toast.success("Deleted successfully"); fetchStudents(); }
+      } catch (error) { toast.error("Deletion failed"); }
     }
   };
 
@@ -53,141 +53,166 @@ const StudentList = () => {
     s.rollNumber?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) return <Loader fullScreen={true} message="Syncing SVPC Directory..." />;
+  // Quick stats calculations
+  const stats = {
+    total: students.length,
+    pending: students.filter(s => s.adminApproved === 'pending').length,
+    activeLoans: students.reduce((acc, s) => acc + (s.activeBorrowCount || 0), 0)
+  };
+
+  if (loading) return <Loader fullScreen={true} message="Accessing SVPC Vault..." />;
 
   return (
-    <div className="animate-in fade-in duration-700 font-sans sm:px-4 pb-20">
+    <div className="max-w-7xl mx-auto px-4 py-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
       {/* HEADER SECTION */}
-      <div className="px-4 sm:px-0 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 border-b-2 border-slate-200 pb-8 mb-6">
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tighter uppercase font-heading">Registry</h1>
-          <p className="text-[#14D3BC] text-[10px] font-black uppercase tracking-[0.3em] mt-2">Identity Control Console</p>
+      <div className="mb-10 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight italic uppercase">Registry<span className="text-[#14D3BC]">.</span></h1>
+            <p className="text-slate-500 font-medium text-sm mt-1">Manage institutional identities and academic access.</p>
+          </div>
+          
+          <div className="relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#14D3BC] transition-colors" size={20} />
+            <input 
+              type="text" 
+              placeholder="Search by name or roll number..." 
+              className="w-full md:w-80 pl-12 pr-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:border-[#14D3BC] outline-none transition-all shadow-sm focus:shadow-md font-semibold text-slate-700"
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
 
-        <div className="relative w-full lg:w-96 group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#14D3BC]" size={18} />
-          <input 
-            type="text" 
-            placeholder="Search name or roll no..." 
-            className="w-full pl-12 pr-4 py-4 border-2 border-slate-100 focus:border-[#14D3BC] outline-none font-bold text-[11px] uppercase tracking-widest bg-slate-50 focus:bg-white transition-all sm:rounded-none"
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        {/* QUICK STATS CARDS */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white p-4 border-2 border-slate-100 rounded-2xl flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-blue-50 p-3 rounded-xl text-blue-600"><Users size={24}/></div>
+            <div><p className="text-xs font-bold text-slate-400 uppercase">Total Students</p><p className="text-xl font-black text-slate-800">{stats.total}</p></div>
+          </div>
+          <div className="bg-white p-4 border-2 border-slate-100 rounded-2xl flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-amber-50 p-3 rounded-xl text-amber-600"><Clock size={24}/></div>
+            <div><p className="text-xs font-bold text-slate-400 uppercase">Pending Review</p><p className="text-xl font-black text-slate-800">{stats.pending}</p></div>
+          </div>
+          <div className="bg-white p-4 border-2 border-slate-100 rounded-2xl flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-emerald-50 p-3 rounded-xl text-emerald-600"><BookMarked size={24}/></div>
+            <div><p className="text-xs font-bold text-slate-400 uppercase">Active Borrows</p><p className="text-xl font-black text-slate-800">{stats.activeLoans}</p></div>
+          </div>
         </div>
       </div>
 
-      {/* TABLE */}
-      <div className="bg-white sm:border-2 border-slate-900 overflow-hidden sm:shadow-[10px_10px_0px_0px_rgba(15,23,42,0.05)]">
-        <div className="overflow-x-auto overflow-y-hidden">
+      {/* MAIN TABLE CONTAINER */}
+      <div className="bg-white rounded-[2rem] border-2 border-slate-900/5 overflow-hidden shadow-2xl">
+        <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-900 text-white font-heading">
-                <th className="px-4 sm:px-6 py-5 text-[10px] uppercase tracking-widest">Student Identity</th>
-                <th className="px-4 sm:px-6 py-5 text-[10px] uppercase tracking-widest">Academic Matrix</th>
-                <th className="px-4 sm:px-6 py-5 text-[10px] uppercase tracking-widest text-center">Status</th>
-                <th className="px-4 sm:px-6 py-5 text-[10px] uppercase tracking-widest text-center">Actions</th>
+              <tr className="bg-slate-50 text-slate-500 border-b border-slate-100">
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-wider">Student Profile</th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-wider">Academic details</th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-wider">Verification</th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-wider text-right text-[#14D3BC]">Operations</th>
               </tr>
             </thead>
-            <tbody className="divide-y-2 divide-slate-100">
-              {filteredStudents.map((student) => (
+            <tbody className="divide-y divide-slate-50">
+              {filteredStudents.length > 0 ? filteredStudents.map((student) => (
                 <React.Fragment key={student._id}>
-                  <tr className="hover:bg-slate-50 transition-colors align-top sm:align-middle">
+                  <tr className={`hover:bg-slate-50/80 transition-all ${expandedStudent === student._id ? 'bg-[#14D3BC]/5' : ''}`}>
                     
-                    {/* Identity Column */}
-                    <td className="px-4 sm:px-6 py-6">
-                      <div className="flex items-center gap-3">
-                        <div className={`h-10 w-10 shrink-0 flex items-center justify-center text-white font-black text-sm border-2 border-slate-900 ${student.adminApproved === 'approved' ? 'bg-[#14D3BC]' : 'bg-slate-300'}`}>
+                    {/* Identity */}
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className={`h-12 w-12 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-inner shadow-black/10 ${student.adminApproved === 'approved' ? 'bg-[#14D3BC]' : 'bg-slate-300'}`}>
                           {student.name[0].toUpperCase()}
                         </div>
-                        <div className="overflow-hidden">
-                          <p className="font-black text-slate-900 uppercase text-xs sm:text-sm leading-tight truncate">{student.name}</p>
-                          <p className="text-[9px] font-bold text-slate-400 flex items-center gap-1 truncate"><Mail size={10}/>{student.email}</p>
+                        <div>
+                          <p className="font-black text-slate-900 text-sm uppercase leading-none mb-1">{student.name}</p>
+                          <p className="text-xs font-bold text-slate-400 lowercase">{student.email}</p>
                         </div>
                       </div>
                     </td>
 
-                    {/* Academic Matrix */}
-                    <td className="px-4 sm:px-6 py-6">
-                      <div className="space-y-2">
-                        <span className="text-[10px] font-black text-slate-800 uppercase block">{student.branch}</span>
-                        <div className="flex flex-wrap gap-1">
-                          <span className="bg-slate-100 text-slate-500 px-2 py-0.5 text-[8px] font-black border border-slate-200 uppercase">{student.rollNumber}</span>
-                          <span className="bg-slate-900 text-white px-2 py-0.5 text-[8px] font-black uppercase tracking-tighter">SEM {student.semester}</span>
+                    {/* Academic */}
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs font-black text-slate-700 uppercase tracking-tight">{student.branch}</span>
+                        <div className="flex gap-2 items-center">
+                          <span className="text-[10px] font-bold text-slate-400">RN: {student.rollNumber}</span>
+                          <span className="h-1 w-1 rounded-full bg-slate-300"></span>
+                          <span className="text-[10px] font-black text-[#14D3BC]">SEM {student.semester}</span>
                         </div>
                       </div>
                     </td>
 
                     {/* Status */}
-                    <td className="px-4 sm:px-6 py-6 text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        <div className={`px-2 py-0.5 border-2 text-[8px] font-black uppercase ${student.accountVerified ? 'border-[#14D3BC] text-[#14D3BC]' : 'border-slate-200 text-slate-400'}`}>
-                          {student.accountVerified ? 'Verified' : 'Pending'}
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col gap-1.5">
+                        <div className={`w-fit px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter shadow-sm ${student.accountVerified ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-500'}`}>
+                          {student.accountVerified ? 'Email Verified' : 'Email Pending'}
                         </div>
-                        <p className="text-[8px] font-bold text-slate-500">HOLDINGS: {student.activeBorrowCount}/6</p>
+                        <p className="text-[10px] font-bold text-slate-400 ml-1">Books: {student.activeBorrowCount || 0}/6</p>
                       </div>
                     </td>
 
                     {/* Actions */}
-                    <td className="px-4 sm:px-6 py-6">
-                      <div className="flex items-center justify-center gap-2">
+                    <td className="px-6 py-5">
+                      <div className="flex items-center justify-end gap-3">
                         <button 
                           onClick={() => toggleExpand(student._id)} 
-                          className={`w-9 h-9 flex items-center justify-center border-2 transition-all ${expandedStudent === student._id ? 'bg-slate-900 text-[#14D3BC] border-slate-900' : 'border-slate-200 text-slate-400 hover:border-slate-900'}`}
-                          title="View Issued Books"
+                          className={`p-2.5 rounded-xl transition-all ${expandedStudent === student._id ? 'bg-slate-900 text-[#14D3BC]' : 'hover:bg-slate-100 text-slate-400'}`}
                         >
-                          <BookMarked size={16} />
+                          <BookMarked size={18} />
                         </button>
 
                         {student.adminApproved === 'pending' ? (
-                          <button onClick={() => handleApprove(student._id, student.name)} className="w-9 h-9 flex items-center justify-center bg-slate-900 text-[#14D3BC] border-2 border-slate-900 hover:bg-[#14D3BC] hover:text-white transition-all">
-                            <UserCheck size={16} />
+                          <button 
+                            onClick={() => handleApprove(student._id, student.name)} 
+                            className="p-2.5 rounded-xl bg-slate-900 text-[#14D3BC] hover:scale-110 active:scale-95 transition-all shadow-lg shadow-slate-200"
+                            title="Approve Profile"
+                          >
+                            <UserCheck size={18} />
                           </button>
                         ) : (
-                          <div className="w-9 h-9 flex items-center justify-center text-[#14D3BC] border-2 border-[#14D3BC]">
-                            <CheckCircle2 size={16} />
+                          <div className="p-2.5 text-[#14D3BC] bg-emerald-50 rounded-xl" title="Approved">
+                            <CheckCircle2 size={18} />
                           </div>
                         )}
 
-                        <button onClick={() => handleDelete(student._id, student.name)} className="w-9 h-9 flex items-center justify-center border-2 border-rose-500 text-rose-500 hover:bg-rose-500 hover:text-white transition-all">
-                          <Trash2 size={16} />
+                        <button 
+                          onClick={() => handleDelete(student._id, student.name)} 
+                          className="p-2.5 rounded-xl text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-all"
+                        >
+                          <Trash2 size={18} />
                         </button>
                       </div>
                     </td>
                   </tr>
 
-                  {/* --- EXPANDED VIEW: ISSUE BOOKS LIST --- */}
+                  {/* EXPANDED VIEW */}
                   {expandedStudent === student._id && (
-                    <tr className="bg-slate-50">
-                      <td colSpan="4" className="px-4 sm:px-10 py-6 border-x-2 border-slate-900">
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2 border-b-2 border-slate-200 pb-2">
-                            <BookOpen size={14} className="text-[#14D3BC]" />
-                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Digital Borrowing Ledger</h4>
-                          </div>
+                    <tr>
+                      <td colSpan="4" className="px-6 py-0 border-none bg-slate-50/50">
+                        <div className="py-6 px-10 animate-in slide-in-from-top-2 duration-300">
+                           <div className="flex items-center gap-3 mb-4">
+                              <div className="h-0.5 w-10 bg-[#14D3BC]"></div>
+                              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Live Book Ledger</h4>
+                           </div>
 
                           {student.issueBooks && student.issueBooks.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               {student.issueBooks.map((book, index) => (
-                                <div key={index} className="bg-white border-2 border-slate-200 p-3 flex justify-between items-center group hover:border-[#14D3BC] transition-all">
-                                  <div className="flex flex-col">
-                                    <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight">{book.bookTitle || "Untitled Asset"}</span>
-                                    <span className="text-[8px] font-bold text-slate-400 font-mono">ISSUE ID: {book.issueId || book.bookId}</span>
+                                <div key={index} className="bg-white border border-slate-200 p-4 rounded-2xl flex justify-between items-center group hover:border-[#14D3BC] transition-all shadow-sm">
+                                  <div>
+                                    <p className="text-[11px] font-black text-slate-800 uppercase line-clamp-1">{book.bookTitle || "Untitled Asset"}</p>
+                                    <p className="text-[9px] font-bold text-slate-400 mt-1 font-mono">{book.issueId || "ID-UNAVAILABLE"}</p>
                                   </div>
-                                  <div className="flex items-center gap-3">
-                                    <div className="text-right">
-                                      <p className="text-[7px] font-black text-slate-300 uppercase">Return Status</p>
-                                      <p className={`text-[8px] font-black uppercase ${book.returned ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                        {book.returned ? 'Restored' : 'In Possession'}
-                                      </p>
-                                    </div>
-                                    <ArrowRight size={12} className="text-slate-200 group-hover:text-[#14D3BC]" />
-                                  </div>
+                                  <div className={`h-2 w-2 rounded-full ${book.returned ? 'bg-emerald-400' : 'bg-rose-400 animate-pulse'}`}></div>
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <div className="py-4 text-center">
-                              <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">No active assets assigned to this identity profile</p>
+                            <div className="flex flex-col items-center py-6 opacity-40">
+                              <AlertCircle size={32} className="text-slate-300 mb-2"/>
+                              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest italic">Zero active borrow records found</p>
                             </div>
                           )}
                         </div>
@@ -195,7 +220,11 @@ const StudentList = () => {
                     </tr>
                   )}
                 </React.Fragment>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan="4" className="px-6 py-20 text-center text-slate-400 font-bold uppercase tracking-widest">No identities found matching query</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

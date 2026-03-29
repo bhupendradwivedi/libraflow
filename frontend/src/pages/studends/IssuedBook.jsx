@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   BookOpen, Calendar, AlertCircle, 
-  Clock, ArrowRight, RotateCcw 
+  Clock, RotateCcw, Library, IndianRupee, Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import issueService from '../../services/IssueServices';
@@ -34,132 +34,144 @@ const IssuedBooks = () => {
     try {
       const res = await issueService.requestReturn(issueId);
       if (res.success) {
-        toast.success("Return dispatched");
+        toast.success("Return request initiated");
         fetchMyBooks(); 
       }
     } catch (error) {
-      toast.error(error.message || "Failed");
+      toast.error(error.message || "Action failed");
     }
   };
 
-  if (loading) return <Loader fullScreen={true} message="Accessing Shelf..." />;
+  const totalFine = issuedBooks.reduce((acc, curr) => acc + (curr.currentFine || 0), 0);
+
+  if (loading) return <Loader fullScreen={true} message="Opening your digital shelf..." />;
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-700 font-sans px-2 sm:px-6 pb-20">
+    <div className="min-h-screen bg-[#FDFDFD] pb-20 px-4 sm:px-6">
       
-      {/* --- HEADER --- */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b-2 border-slate-900 pb-6 sm:pb-8">
+      {/* 1. DYNAMIC HEADER */}
+      <header className="max-w-6xl mx-auto pt-8 pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-100 mb-8">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none font-heading">
-            My Shelf
+          <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tighter uppercase italic">
+            My <span className="text-[#14D3BC]">Shelf.</span>
           </h1>
-          <p className="text-[#14D3BC] text-[9px] font-black uppercase tracking-[0.3em] mt-2">
-            Active Holdings & Fine Tracking
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2 flex items-center gap-2">
+             <Library size={12} className="text-[#14D3BC]"/> Active Asset Holdings
           </p>
         </div>
         
-        {/* Compact Stats */}
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="flex-1 md:flex-none bg-white px-4 py-2 border-2 border-slate-900 shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] text-center">
-            <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest">Active</p>
-            <p className="text-xl font-black text-slate-900 font-mono">{issuedBooks.length}</p>
+        {/* Fine Summary Card */}
+        <div className={`w-full md:w-auto px-6 py-4 rounded-[2rem] border-2 flex items-center justify-between gap-8 ${totalFine > 0 ? 'bg-rose-50 border-rose-100 text-rose-600 shadow-lg shadow-rose-100/50' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black uppercase tracking-widest">Total Fine Accrued</span>
+            <span className="text-2xl font-black font-mono leading-none flex items-center"><IndianRupee size={20} />{totalFine}</span>
           </div>
-          <div className="flex-1 md:flex-none bg-slate-900 px-4 py-2 shadow-[3px_3px_0px_0px_rgba(20,211,188,1)] text-center border-2 border-slate-900">
-            <p className="text-[7px] font-black text-[#14D3BC] uppercase tracking-widest">Fine</p>
-            <p className="text-xl font-black text-white font-mono">₹{issuedBooks.reduce((acc, curr) => acc + (curr.currentFine || 0), 0)}</p>
-          </div>
+          {totalFine > 0 && <AlertCircle className="animate-pulse" size={24} />}
         </div>
-      </div>
+      </header>
 
-      {/* --- COMPACT BOOKS GRID --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {issuedBooks.length > 0 ? (
-          issuedBooks.map((item) => {
-            const fine = item.currentFine || 0;
-            const isOverdue = fine > 0;
-            const isReturnPending = item.status === 'return_requested';
+      {/* 2. ASSET GRID */}
+      <main className="max-w-6xl mx-auto">
+        {issuedBooks.length === 0 ? (
+          <div className="py-32 flex flex-col items-center justify-center text-center">
+            <div className="h-24 w-24 bg-slate-50 rounded-full flex items-center justify-center mb-4 border-2 border-dashed border-slate-200">
+                <Library size={40} className="text-slate-200" />
+            </div>
+            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Your shelf is currently empty</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+            {issuedBooks.map((item) => {
+              const fine = item.currentFine || 0;
+              const isOverdue = fine > 0;
+              const isReturnPending = item.status === 'return_requested';
 
-            return (
-              <div key={item._id} className="bg-white border-2 border-slate-900 p-3 sm:p-4 flex gap-4 group relative shadow-[6px_6px_0px_0px_rgba(15,23,42,0.05)] hover:shadow-none transition-all">
-                
-                {/* Book Cover: Fixed Smaller Size for PC */}
-                <div className="w-24 sm:w-28 h-36 sm:h-40 bg-slate-50 border-2 border-slate-900 overflow-hidden shrink-0 relative">
-                  <img 
-                    src={item.book?.image?.url || 'https://placehold.co/300x450?text=BOOK'} 
-                    alt={item.book?.title}
-                    className="w-full h-full object-cover"
-                  />
-                  {isOverdue && (
-                    <div className="absolute top-0 right-0 bg-rose-600 text-white px-1.5 py-0.5 font-black text-[7px] uppercase">
-                      Overdue
+              return (
+                <div 
+                  key={item._id} 
+                  className={`group relative bg-white border-2 rounded-[2.5rem] p-5 transition-all duration-300 ${isReturnPending ? 'border-amber-200 bg-amber-50/20' : isOverdue ? 'border-rose-100 hover:border-rose-300' : 'border-slate-50 hover:border-[#14D3BC] shadow-xl shadow-slate-200/40 hover:shadow-[#14D3BC]/10'}`}
+                >
+                  <div className="flex gap-5">
+                    {/* Book Cover Container */}
+                    <div className="w-24 sm:w-28 h-36 sm:h-40 shrink-0 relative">
+                        <div className={`absolute inset-0 rounded-3xl rotate-3 translate-x-1 translate-y-1 -z-10 transition-transform group-hover:rotate-6 ${isOverdue ? 'bg-rose-100' : 'bg-[#14D3BC]/20'}`} />
+                        <img 
+                            src={item.book?.image?.url || 'https://placehold.co/300x450?text=BOOK'} 
+                            alt="cover" 
+                            className="h-full w-full object-cover rounded-3xl shadow-md border border-white" 
+                        />
+                    </div>
+
+                    {/* Book Content */}
+                    <div className="flex-1 flex flex-col justify-between py-1 overflow-hidden">
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                           <span className="text-[9px] font-black text-slate-300 uppercase font-mono tracking-tighter">REF: {item._id.slice(-6).toUpperCase()}</span>
+                           {isReturnPending && (
+                             <span className="bg-amber-100 text-amber-700 text-[8px] font-black px-2 py-1 rounded-full uppercase animate-bounce">Pending Admin Approval</span>
+                           )}
+                        </div>
+                        <h3 className="text-base sm:text-xl font-black text-slate-900 uppercase tracking-tighter leading-[1.1] mb-1 line-clamp-2">
+                          {item.book?.title}
+                        </h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight truncate">By {item.book?.author}</p>
+                      </div>
+
+                      {/* Dates & Action Row */}
+                      <div className="flex items-end justify-between mt-4">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2 bg-slate-50 w-fit px-2 py-1 rounded-lg">
+                            <Calendar size={12} className="text-slate-400" />
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">Issued: {new Date(item.issueDate).toLocaleDateString('en-GB')}</span>
+                          </div>
+                          <div className={`flex items-center gap-2 w-fit px-2 py-1 rounded-lg ${isOverdue ? 'bg-rose-100 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                            <Clock size={12} strokeWidth={3} />
+                            <span className="text-[10px] font-black uppercase">Due: {new Date(item.dueDate).toLocaleDateString('en-GB')}</span>
+                          </div>
+                        </div>
+
+                        {/* Action Button */}
+                        <button 
+                          disabled={isReturnPending}
+                          onClick={() => handleReturnRequest(item._id)}
+                          className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-all shadow-lg ${
+                            isReturnPending 
+                            ? 'bg-slate-100 text-slate-300 cursor-not-allowed' 
+                            : 'bg-slate-900 text-[#14D3BC] hover:bg-[#14D3BC] hover:text-white active:scale-90 shadow-slate-200'
+                          }`}
+                        >
+                          {isReturnPending ? <Clock size={20} /> : <RotateCcw size={20} strokeWidth={3} />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Overdue Penalty Banner */}
+                  {isOverdue && !isReturnPending && (
+                    <div className="mt-5 p-3 rounded-2xl bg-rose-600 flex justify-between items-center shadow-lg shadow-rose-200">
+                        <div className="flex items-center gap-2 text-white">
+                          <Info size={14} />
+                          <span className="text-[9px] font-black uppercase tracking-[0.1em]">Penalty Settlement Required</span>
+                        </div>
+                        <div className="flex items-center font-mono font-black text-white text-sm">
+                            <IndianRupee size={14} />{fine}
+                        </div>
                     </div>
                   )}
                 </div>
-
-                {/* Metadata & Actions */}
-                <div className="flex-1 flex flex-col justify-between overflow-hidden">
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="text-[7px] font-black text-[#14D3BC] uppercase">ID: {item._id?.slice(-4).toUpperCase()}</span>
-                        <div className={`h-1.5 w-1.5 rounded-full ${isReturnPending ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
-                    </div>
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-tighter leading-tight font-heading truncate">
-                      {item.book?.title}
-                    </h3>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">
-                      {item.book?.author}
-                    </p>
-                  </div>
-
-                  {/* Dates: Small font for compact feel */}
-                  <div className="grid grid-cols-2 gap-2 border-y border-slate-100 py-2 my-2">
-                    <div>
-                      <p className="text-[7px] font-black text-slate-300 uppercase flex items-center gap-1">
-                        <Calendar size={8} /> Issued
-                      </p>
-                      <p className="text-[9px] font-black text-slate-700 font-mono">
-                        {new Date(item.issueDate).toLocaleDateString('en-GB')}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[7px] font-black text-slate-300 uppercase flex items-center gap-1">
-                        <Clock size={8} /> Due
-                      </p>
-                      <p className={`text-[9px] font-black font-mono ${isOverdue ? 'text-rose-600' : 'text-slate-700'}`}>
-                        {new Date(item.dueDate).toLocaleDateString('en-GB')}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Footer */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                        <p className={`text-xs font-black font-mono ${isOverdue ? 'text-rose-600' : 'text-emerald-500'}`}>₹{fine}</p>
-                    </div>
-
-                    <button 
-                      disabled={isReturnPending}
-                      onClick={() => handleReturnRequest(item._id)}
-                      className={`px-3 py-1.5 border-2 font-black text-[9px] uppercase tracking-widest flex items-center gap-2 transition-all flex-1 justify-center ${
-                        isReturnPending 
-                        ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed' 
-                        : 'bg-slate-900 border-slate-900 text-white hover:bg-[#14D3BC] shadow-[2px_2px_0px_0px_rgba(20,211,188,1)] active:shadow-none'
-                      }`}
-                    >
-                      {isReturnPending ? 'Pending' : 'Return'} 
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="col-span-full py-20 bg-white border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center">
-            <BookOpen size={32} className="text-slate-200 mb-4" />
-            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Shelf Empty</p>
+              );
+            })}
           </div>
         )}
+      </main>
+
+      {/* 3. QUICK INFO TAB (Floating for Mobile) */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] md:w-auto bg-slate-900/90 backdrop-blur-xl text-white px-8 py-3 rounded-full flex items-center gap-4 border border-white/10 shadow-2xl z-40 md:hidden">
+         <span className="text-[10px] font-black uppercase tracking-widest text-[#14D3BC]">Shelf Summary</span>
+         <div className="h-4 w-px bg-white/20"></div>
+         <span className="text-xs font-bold">{issuedBooks.length} Assets</span>
       </div>
+
     </div>
   );
 };

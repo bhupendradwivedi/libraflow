@@ -1,1 +1,36 @@
 @import "tailwindcss";
+@theme {
+  /* 1. Global Font Families */
+  --font-sans: "Inter", "system-ui", "sans-serif";
+  --font-heading: "Archivo", "sans-serif";
+  --font-mono: "JetBrains Mono", "monospace";
+
+  /* 2. Custom Sizes (Consistency ke liye) */
+  --text-tiny: 0.65rem;   /* 10px */
+  --text-micro: 0.55rem;  /* 8px */
+  
+  /* 3. Custom Spacing */
+  --tracking-ultra: 0.3em;
+}
+
+@layer base {
+  /* Google Fonts Import */
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Archivo:wght@800;900&family=JetBrains+Mono:wght@700&display=swap');
+
+  body {
+    @apply font-sans antialiased text-slate-900 bg-[#F8FAFC];
+    /* Mobile Bouncing Block */
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Sabhi Headings ke liye default style */
+  h1, h2, h3 {
+    @apply font-heading tracking-tighter uppercase;
+  }
+}
+
+/* Custom Scrollbar Hide */
+.custom-scrollbar::-webkit-scrollbar {
+  display: none;
+}

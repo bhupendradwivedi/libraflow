@@ -136,7 +136,7 @@ export const getAdminReturnRequests = asyncErrorHandler(async (req, res, next) =
 
     const requests = await issueModel.find({ status: "return_requested" })
         .populate("user", "name email rollNumber branch year semester")
-        .populate("book", "title author price");
+        .populate("book", "title author price isbn image");
 
     
     const requestsWithFine = requests.map(record => {

@@ -21,24 +21,21 @@ const Register = () => {
   const { register, isActionLoading } = useContext(AuthContext); 
   const navigate = useNavigate();
 
-  const handleRegister = async (e) => {
+const handleRegister = async (e) => {
     e.preventDefault();
-    
-    if (!userData.year || !userData.semester) {
-      return toast.error("Please select Year and Semester");
-    }
-
+    if (isActionLoading) return; 
     try {
-      const data = await register(userData);
-      if (data?.success) {
-        toast.success("OTP sent to your email!");
-        navigate('/verify-otp', { state: { email: userData.email } });
-      }
+        const data = await register(userData);
+        if (data?.success) {
+            toast.success("OTP sent! Check your mail.");
+            navigate('/verify-otp', { state: { email: userData.email } });
+        }
     } catch (error) {
-      console.log("Registration error:", error);
-      toast.error(error.response?.data?.message || "Registration failed");
+      
+        const errMsg = error.response?.data?.message || "Server Busy. Try again.";
+        toast.error(errMsg);
     }
-  };
+};
 
   return (
     <div className="min-h-screen w-full bg-white flex items-center justify-center font-sans p-4 md:p-8">

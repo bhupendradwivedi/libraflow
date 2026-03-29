@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import issueService from '../../services/IssueServices.js';
 import { 
   Check, X, BookOpen, Search, GraduationCap, 
-  Timer, User, ArrowRightLeft, CheckCircle2 
+  Clock, User, ArrowRightLeft, CheckCircle2,
+  Hash, Book as BookIcon, UserCircle, Calendar
 } from 'lucide-react'; 
 import toast from 'react-hot-toast';
 import Loader from '../../components/common/Loader';
@@ -26,100 +27,134 @@ const RequestManager = () => {
 
   useEffect(() => { fetchAllRequests(); }, []);
 
-  const filteredRequests = requests.filter((req) => {
-    const query = searchTerm.toLowerCase();
-    return (
+  const filteredRequests = useMemo(() => {
+    const query = searchTerm.toLowerCase().trim();
+    return requests.filter((req) =>
       req.student?.name?.toLowerCase().includes(query) || 
       req.book?.title?.toLowerCase().includes(query) ||
       req.student?.rollNumber?.toLowerCase().includes(query)
     );
-  });
+  }, [requests, searchTerm]);
 
   const handleAction = async (id, action, name) => {
-    if (!window.confirm(`Confirm: ${action} request for ${name}?`)) return;
+    const loadingToast = toast.loading(`${action === 'approve' ? 'Approving' : 'Rejecting'}...`);
     try {
       if (action === 'approve') await issueService.approveIssueRequest(id);
       else if (action === 'reject') await issueService.rejectIssueRequest(id);
       
-      toast.success(`Request ${action}ed successfully`);
-      fetchAllRequests(); 
+      toast.success(`Request ${action}ed`, { id: loadingToast });
+      setRequests(prev => prev.filter(r => r._id !== id));
     } catch (error) {
-      toast.error(error.message || "Operation failed");
+      toast.error("Operation failed", { id: loadingToast });
     }
   };
 
-  if (loading) return <Loader fullScreen={true} message="Accessing SVPC Command Queue..." />;
+  if (loading) return <Loader fullScreen={true} message="Syncing Requests..." />;
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700 font-sans px-4 pb-20">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 border-b-2 border-slate-200 pb-8">
+    <div className="w-full max-w-4xl mx-auto px-4 py-6 pb-24 font-sans text-slate-900">
+      
+      {/* HEADER & SEARCH */}
+      <div className="mb-8 space-y-4">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">
-            Action <span className="text-[#14D3BC]">Queue</span>
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">
+            Request <span className="text-teal-600">Manager</span>
           </h1>
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] mt-3 flex items-center gap-2">
-            <ArrowRightLeft size={12} className="text-[#14D3BC]" /> Circulation & Asset Movement
-          </p>
+          <p className="text-slate-500 text-xs font-medium">Manage book issue approvals</p>
         </div>
 
-        <div className="relative w-full lg:w-96">
+        <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input 
             type="text"
-            placeholder="SEARCH BY STUDENT OR BOOK..."
+            placeholder="Search student or book..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-4 py-3 border-2 border-slate-100 focus:border-[#14D3BC] outline-none font-bold text-[10px] uppercase tracking-widest transition-all bg-slate-50 focus:bg-white rounded-none"
+            className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 outline-none transition-all text-sm shadow-sm"
           />
         </div>
       </div>
 
+      {/* REQUEST CARDS */}
       {filteredRequests.length === 0 ? (
-        <div className="bg-white border-2 border-dashed border-slate-200 py-32 text-center">
-          <CheckCircle2 className="mx-auto text-slate-200 mb-4" size={48} />
-          <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">Queue Cleared • No Actions</p>
+        <div className="bg-white rounded-[2rem] border-2 border-dashed border-slate-100 py-20 text-center">
+          <CheckCircle2 size={40} className="mx-auto text-emerald-400 mb-3" />
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Queue is Clear</p>
         </div>
       ) : (
-        <div className="grid gap-6">
+        <div className="space-y-6">
           {filteredRequests.map((req) => (
-            <div key={req._id} className="bg-white border-2 border-slate-900 flex flex-col lg:flex-row items-stretch shadow-[8px_8px_0px_0px_rgba(15,23,42,0.05)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all">
-              <div className="w-2 shrink-0 bg-orange-500" />
-              <div className="flex-1 p-6 flex flex-col lg:flex-row justify-between items-center gap-8">
-                <div className="flex items-start gap-6 flex-1 w-full">
-                  <div className="w-14 h-14 bg-slate-100 border-2 border-slate-900 flex items-center justify-center text-slate-900 shrink-0">
-                    <User size={24} />
-                  </div>
-                  <div className="space-y-3 w-full">
-                    <h4 className="font-black text-slate-900 uppercase tracking-tighter text-xl leading-none">
-                      {req.student?.name || "Unknown"}
-                    </h4>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-[9px] font-black text-slate-400 font-mono">#{req.student?.rollNumber}</span>
-                      <p className="text-slate-900 font-black text-[10px] uppercase tracking-tight flex items-center gap-1">
-                        <BookOpen size={12} className="text-[#14D3BC]" /> {req.book?.title}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-3 pt-2">
-                      <div className="flex items-center gap-2 text-[9px] font-black text-slate-500 uppercase tracking-wider">
-                        <GraduationCap size={12} className="text-[#14D3BC]" /> 
-                        {req.student?.branch} | Sem {req.student?.semester}
-                      </div>
-                      <div className="flex items-center gap-2 text-[9px] font-black text-slate-500 uppercase tracking-wider font-mono">
-                        <Timer size={12} className="text-[#14D3BC]" /> {new Date(req.createdAt).toLocaleDateString('en-GB')}
-                      </div>
-                    </div>
+            <div key={req._id} className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col transition-all active:scale-[0.98]">
+              
+              {/* 1. STUDENT INFO (Header of Card) */}
+              <div className="p-5 flex items-center gap-4 border-b border-slate-50">
+                <div className="w-12 h-12 bg-teal-50 text-teal-600 rounded-full flex items-center justify-center shrink-0">
+                  <UserCircle size={24} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-slate-900 leading-none truncate">{req.student?.name}</h4>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase bg-slate-100 px-1.5 py-0.5 rounded tracking-tighter">
+                      ID: {req.student?.rollNumber}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
+                      <GraduationCap size={12} className="text-teal-500" /> {req.student?.branch}
+                    </span>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-3 w-full lg:w-auto">
-                  <button onClick={() => handleAction(req._id, 'reject', req.student?.name)} className="p-4 border-2 border-slate-200 text-slate-400 hover:border-rose-600 hover:text-rose-600 transition-all bg-white"><X size={18} /></button>
-                  <button onClick={() => handleAction(req._id, 'approve', req.student?.name)} className="flex-1 lg:px-8 py-4 bg-slate-900 text-white border-2 border-slate-900 font-black text-[10px] uppercase tracking-widest hover:bg-[#14D3BC] shadow-[4px_4px_0px_0px_rgba(20,211,188,1)] transition-all">Approve Issue</button>
+                <div className="text-right shrink-0">
+                  <p className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Requested</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">{new Date(req.createdAt).toLocaleDateString('en-GB')}</p>
                 </div>
               </div>
+
+              {/* 2. BOOK INFO (Body of Card) */}
+              <div className="bg-slate-50/50 p-5 flex gap-4">
+                <div className="shrink-0">
+                  <img 
+                    src={req.book?.image?.url || "https://placehold.co/100x150?text=No+Cover"} 
+                    className="w-14 h-20 object-cover rounded-lg shadow-sm border-2 border-white"
+                    alt={req.book?.title}
+                  />
+                </div>
+                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                  <p className="text-[9px] font-bold text-teal-600 uppercase tracking-widest mb-1">Requested Book</p>
+                  <h4 className="text-sm font-bold text-slate-800 line-clamp-2 leading-tight mb-1">
+                    {req.book?.title}
+                  </h4>
+                  <p className="text-[10px] text-slate-500 font-medium italic">by {req.book?.author}</p>
+                  <p className="text-[9px] font-mono font-bold text-slate-400 mt-2 uppercase tracking-tighter">ISBN: {req.book?.isbn || "N/A"}</p>
+                </div>
+              </div>
+
+              {/* 3. ACTIONS (Footer of Card) */}
+              <div className="p-3 flex gap-2 bg-white border-t border-slate-100">
+                <button 
+                  onClick={() => handleAction(req._id, 'reject', req.student?.name)}
+                  className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-rose-50 text-rose-600 rounded-xl font-bold text-xs uppercase tracking-widest transition-colors active:bg-rose-100"
+                >
+                  <X size={16} /> Reject
+                </button>
+                <button 
+                  onClick={() => handleAction(req._id, 'approve', req.student?.name)}
+                  className="flex-[2] flex items-center justify-center gap-2 py-3.5 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-slate-200 active:scale-95 transition-all"
+                >
+                  <Check size={16} /> Approve Issue
+                </button>
+              </div>
+
             </div>
           ))}
         </div>
       )}
+
+      {/* MOBILE END INFO */}
+      <div className="mt-12 text-center">
+        <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.3em]">
+          Powered by AdminCore
+        </p>
+      </div>
+
     </div>
   );
 };

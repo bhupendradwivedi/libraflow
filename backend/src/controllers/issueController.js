@@ -73,11 +73,11 @@ export const recordIssueBooks = asyncErrorHandler(async (req, res, next) => {
 
 export const getAllPendingRequestsAdmin = async (req, res) => {
     try {
-        // Admin ko sabki pending requests dikhni chahiye
+       
         const requests = await issueRequestModel.find({ status: 'pending' })
             .populate({
                 path: 'book',
-                select: 'title author image isbn'
+                select: 'title author isbn image'
             })
             .populate({
                 path: 'student', 

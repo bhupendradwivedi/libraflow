@@ -9,7 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true); // Initial Page Load Loader
   const [isActionLoading, setIsActionLoading] = useState(false); // Button Spinner Loader
 
-  // 1. VERIFY SESSION
+  // --- 1. SESSION VERIFICATION ---
   useEffect(() => {
     const verifyUser = async () => {
       const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
@@ -43,9 +43,9 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  // 2. REGISTER LOGIC
+  // --- 2. REGISTER LOGIC ---
   const register = async (userData) => {
-    setIsActionLoading(true); // Loader ON
+    setIsActionLoading(true);
     try {
       const data = await authService.register(userData);
       if (data?.success) {
@@ -53,16 +53,16 @@ export const AuthProvider = ({ children }) => {
       }
       return data;
     } catch (error) {
-      toast.error(error.message || "Registration failed");
+      toast.error(error.response?.data?.message || "Registration failed");
       throw error;
     } finally {
-      setIsActionLoading(false); // Loader OFF
+      setIsActionLoading(false);
     }
   };
 
-  // 3. VERIFY OTP
+  // --- 3. VERIFY OTP ---
   const verifyOtp = async (email, otp) => {
-    setIsActionLoading(true); // Loader ON
+    setIsActionLoading(true);
     try {
       const data = await authService.verifyOtp(email, otp);
       if (data?.success) {
@@ -70,16 +70,16 @@ export const AuthProvider = ({ children }) => {
       }
       return data;
     } catch (error) {
-      toast.error(error.message || "OTP verification failed");
+      toast.error(error.response?.data?.message || "OTP verification failed");
       throw error;
     } finally {
-      setIsActionLoading(false); // Loader OFF
+      setIsActionLoading(false);
     }
   };
 
-  // 4. RESEND OTP
+  // --- 4. RESEND OTP ---
   const resendOtp = async (email) => {
-    setIsActionLoading(true); // Loader ON
+    setIsActionLoading(true);
     try {
       const data = await authService.resendOtp(email);
       if (data?.success) {
@@ -87,41 +87,41 @@ export const AuthProvider = ({ children }) => {
       }
       return data;
     } catch (error) {
-      toast.error(error.message || "Failed to resend OTP");
+      toast.error(error.response?.data?.message || "Failed to resend OTP");
       throw error;
     } finally {
-      setIsActionLoading(false); // Loader OFF
+      setIsActionLoading(false);
     }
   };
 
+  // --- 5. LOGIN LOGIC (Cleaned Up) ---
   const login = async (email, password) => {
     setIsActionLoading(true);
     try {
-        const data = await authService.login(email, password);
-        
-        if (data?.success) {
-            localStorage.setItem("token", data.token); 
-            localStorage.setItem("isLoggedIn", "true");
-            setUser(data.user);
-            toast.success(`Welcome back, ${data.user.name}!`);
-            console.log(data )
-        } else {
-           
-            toast.error(data?.message || "Invalid Email or Password");
-             console.log("merawala",data.message)
-        }
+      const data = await authService.login(email, password);
+      
+      if (data?.success) {
+        localStorage.setItem("token", data.token); 
+        localStorage.setItem("isLoggedIn", "true");
+        setUser(data.user);
+        toast.success(`Welcome back, ${data.user.name}!`);
+        return data; // Success return
+      } else {
+        // Agar backend error message bhej raha hai par success true nahi hai
+        toast.error(data?.message || "Invalid Email or Password");
         return data;
+      }
     } catch (error) {
-        console.log("catcherror",error?.message)
-        const errorMsg = error?.message;
-        toast.error(errorMsg);
-        throw error;
+      // Axios errors usually come here
+      const errorMsg = error.response?.data?.message || error.message || "Login failed";
+      toast.error(errorMsg);
+      throw error;
     } finally {
-        setIsActionLoading(false);
+      setIsActionLoading(false);
     }
-};
+  };
 
-  // 6. LOGOUT LOGIC
+  // --- 6. LOGOUT LOGIC ---
   const logout = async () => {
     setIsActionLoading(true); 
     try {

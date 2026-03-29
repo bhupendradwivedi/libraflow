@@ -8,45 +8,44 @@ import { generateForgetPasswordEmailTemplate } from "../utils/emailTemplate.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import crypto from 'crypto';
 
-export const registerUser = asyncErrorHandler(async (req, res, next) => {
 
+export const registerUser = asyncErrorHandler(async (req, res, next) => {
     const { name, email, password, branch, rollNumber, year, semester } = req.body;
 
-    // 2. Validation check mein bhi inhe add karein
     if (!name || !email || !password || !branch || !rollNumber || !year || !semester) {
-        return next(new ErrorHandler(400, "All fields (including Year & Semester) are required."));
+        return next(new ErrorHandler(400, "All fields are required."));
     }
 
-    const existingVerifiedUser = await userModel.findOne({ email, accountVerified: true });
-    if (existingVerifiedUser) {
-        return next(new ErrorHandler(400, "Email already in use. Please login."));
+    //  Use findOne with selection for speed
+    const existingUser = await userModel.findOne({ email }).select('accountVerified');
+    
+    if (existingUser?.accountVerified) {
+        return next(new ErrorHandler(400, "Email already in use."));
     }
 
-    await userModel.deleteMany({ email, accountVerified: false });
+   
+    userModel.deleteMany({ email, accountVerified: false }).exec();
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 3. Create user mein year aur semester pass karein
     const user = await userModel.create({
-        name,
-        email,
-        branch,
-        rollNumber,
-        year,      
-        semester,  
+        name, email, branch, rollNumber, year, semester,
         password: hashedPassword,
     });
 
     const verificationCode = user.generateVerificationCode();
     await user.save({ validateBeforeSave: false });
 
-    await sendVerificationCode(verificationCode, email);
+   
+    sendVerificationCode(verificationCode, email).catch(err => console.log("Email Error:", err));
 
     return res.status(201).json({
         success: true,
         message: "OTP sent successfully"
     });
 });
+
 
 export const verifyOTP = asyncErrorHandler(async (req, res, next) => {
     //  Extract email and OTP from request body
