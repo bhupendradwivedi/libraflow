@@ -53,6 +53,7 @@ export const addBook = asyncErrorHandler(async (req, res, next) => {
 });
 
 // 2. EDIT BOOK: Updates asset details including ISBN
+
 export const editBook = asyncErrorHandler(async (req, res, next) => {
     const { id } = req.params;
     const { isbn } = req.body;

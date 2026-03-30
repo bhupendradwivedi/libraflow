@@ -95,53 +95,6 @@ export const getAllPendingRequestsAdmin = async (req, res) => {
     }
 };
 
-// export const getMyBookRequests = async (req, res) => {
-//     try {
-//         const studentId = req.user._id;
-
-//         const requests = await issueRequestModel.find({ student: studentId })
-//             .populate({
-//                 path: 'book', 
-//                 select: 'title author description price image category isbn' 
-//             })
-//             .populate({
-//                 path: 'student',
-//                 select: 'name email rollNumber branch year semester'
-//             })
-//             .sort({ createdAt: -1 });
-
-//         const updatedRequests = requests.map(request => {
-//             let currentFine = 0;
-            
-//             if (request.status === 'approved') {
-//                 const targetDate = request.dueDate || new Date(new Date(request.createdAt).getTime() + 14 * 24 * 60 * 60 * 1000);
-                
-//                 currentFine = calculateFine({
-//                     dueDate: targetDate,
-//                     returnDate: new Date(),
-//                     finePerDay: 5,
-//                     maxFine: 1000
-//                 });
-//             }
-            
-//             return { ...request._doc, currentFine };
-//         });
-
-//         res.status(200).json({
-//             success: true,
-//             count: updatedRequests.length,
-//             requests: updatedRequests
-//         });
-
-//     } catch (error) {
-//         console.error("System Error (getMyBookRequests):", error);
-//         res.status(500).json({
-//             success: false,
-//             message: "Failed to fetch book requests.",
-//             error: error.message
-//         });
-//     }
-// };
 
 export const getPendingRequests = asyncErrorHandler(async (req, res, next) => {
    

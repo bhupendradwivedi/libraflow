@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Save, ArrowLeft, BookOpen, User, Hash, DollarSign, Layers, Upload, Info } from 'lucide-react';
 import bookService from '../../services/bookServices';
 import toast from 'react-hot-toast';
-import Loader from '../../components/common/Loader'; // ✅ Using your Universal Loader
-
+import Loader from '../../components/common/Loader'; 
 const EditBook = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -13,7 +12,7 @@ const EditBook = () => {
   const [updating, setUpdating] = useState(false);
   
   const [formData, setFormData] = useState({
-    title: '', author: '', isbn: '', category: 'Computer Science', quantity: 1, price: '', description: '',
+    title: '', author: '', isbn: '', category: '', quantity: 1, price: '', description: '',
   });
   const [preview, setPreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
@@ -29,7 +28,7 @@ const EditBook = () => {
             title: foundBook.title || '',
             author: foundBook.author || '',
             isbn: foundBook.isbn || '',
-            category: foundBook.category || 'Computer Science',
+            category: foundBook.category || '',
             quantity: foundBook.quantity || 1,
             price: foundBook.price || '',
             description: foundBook.description || '',

@@ -18,7 +18,7 @@ router.post(
   addBook
 );
 
-router.put('/admin/edit/:id', authMiddleware, roleMiddleware('admin'), editBook);
+router.put('/admin/edit/:id', authMiddleware, roleMiddleware('admin'),upload.single('image'), editBook);
 
 router.get('/all', authMiddleware, getAllBooks);
 
