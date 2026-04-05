@@ -28,6 +28,7 @@ import StudentList from './pages/admin/StudentList';
 import IssuedBooks from './pages/studends/IssuedBook';
 import EditBook from './pages/admin/EditBook';
 import ReturnRequests from './pages/admin/ReturnManager';
+import ScrollToTop from './components/ScrollTop';
 
 // GLOBAL PAGE WRAPPER
 
@@ -145,6 +146,7 @@ const AnimatedRoutes = () => {
 function App() {
   return (
     <Router>
+      <ScrollToTop/>
       <Toaster
         position="top-center"
         reverseOrder={false}
