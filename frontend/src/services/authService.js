@@ -42,6 +42,10 @@ const authService = {
         handleRequest(
             axiosInstance.post(`${AUTH_BASE}/resend-otp`, { email })
         ),
+    refresh: () =>
+        handleRequest(
+            axiosInstance.get(`${AUTH_BASE}/refresh`)
+        ),
 
 
 
@@ -55,10 +59,10 @@ const authService = {
             axiosInstance.post(`${AUTH_BASE}/logout`)
         ),
     // Backend se current logged-in user ki details fetch karne ke liye
-getUser: () => 
-    handleRequest(
-        axiosInstance.get(`${AUTH_BASE}/me`) 
-    ),
+    getUser: () =>
+        handleRequest(
+            axiosInstance.get(`${AUTH_BASE}/me`)
+        ),
 };
 
 export default authService;

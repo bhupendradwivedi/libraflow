@@ -28,17 +28,17 @@ export const recordIssueBooks = asyncErrorHandler(async (req, res, next) => {
         return next(new ErrorHandler(403, "Account not approved by Admin."));
     }
 
-    
-    
+
+
     if (user.activeBorrowCount >= 6) {
         return next(new ErrorHandler(400, "Library limit reached. You can only have 6 active books."));
     }
 
     // 4. Duplicate Check (Already fixed by you)
     const existingRequest = await issueRequestModel.findOne({
-        student: userId, 
+        student: userId,
         book: bookId,
-        status: { $in: ['pending', 'approved', 'return_requested'] } 
+        status: { $in: ['pending', 'approved', 'return_requested'] }
     });
 
     if (existingRequest) {
@@ -53,7 +53,7 @@ export const recordIssueBooks = asyncErrorHandler(async (req, res, next) => {
 
     // 6. CREATE: Submit request
     let issueRequest = await issueRequestModel.create({
-        student: userId, 
+        student: userId,
         book: bookId,
         status: 'pending',
         requestDate: new Date(),
@@ -61,7 +61,7 @@ export const recordIssueBooks = asyncErrorHandler(async (req, res, next) => {
 
     // 7. POPULATE & SEND
     issueRequest = await issueRequestModel.findById(issueRequest._id)
-        .populate("book", "title author") 
+        .populate("book", "title author")
         .populate("student", "name email");
 
     res.status(201).json({
@@ -73,14 +73,14 @@ export const recordIssueBooks = asyncErrorHandler(async (req, res, next) => {
 
 export const getAllPendingRequestsAdmin = async (req, res) => {
     try {
-       
+
         const requests = await issueRequestModel.find({ status: 'pending' })
             .populate({
                 path: 'book',
                 select: 'title author isbn image'
             })
             .populate({
-                path: 'student', 
+                path: 'student',
                 select: 'name rollNumber branch year semester'
             })
             .sort({ createdAt: -1 });
@@ -97,17 +97,57 @@ export const getAllPendingRequestsAdmin = async (req, res) => {
 
 
 export const getPendingRequests = asyncErrorHandler(async (req, res, next) => {
+    try {
+        const requests = await issueRequestModel.find({ status: 'pending' })
+            .populate({
+                path: 'book',
+                select: 'title author isbn image'
+            })
+            .populate({
+                path: 'student',
+                select: 'name rollNumber branch year semester'
+            })
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: requests.length,
+            requests
+        });
+        next()
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message || 'Book not found' });
+    }
+
+
+});
+
+export const getMyApprovedBookRequests = asyncErrorHandler(async (req, res, next) => {
+    
+    const studentId = req.user._id;
+
    
-    const requests = await issueRequestModel.find({ status: 'pending' })
-        .populate('student', 'name email branch year semester rollNumber')
-        .populate('book', 'title price image')
-        .sort({ createdAt: 1 });
+    const requests = await issueModel.find({ user: studentId })
+        .populate({
+            path: 'book',
+            select: 'title author image isbn price issueDate dueDate' 
+        })
+        .sort({ createdAt: -1 }); 
+   
+    if (!requests) {
+        return res.status(200).json({
+            success: true,
+            requests: []
+        });
+    }
 
     res.status(200).json({
         success: true,
         requests
     });
 });
+
 
 
 export const approveBookRequest = asyncErrorHandler(async (req, res, next) => {
@@ -124,7 +164,7 @@ export const approveBookRequest = asyncErrorHandler(async (req, res, next) => {
         return next(new ErrorHandler(400, "Request already processed."));
     }
 
-    const studentData = request.student; 
+    const studentData = request.student;
     const bookData = request.book;
 
     if (!studentData) {
@@ -134,9 +174,9 @@ export const approveBookRequest = asyncErrorHandler(async (req, res, next) => {
 
     // 2. Atomic Borrow Limit Check (Max 6 books)
     const updatedUser = await userModel.findOneAndUpdate(
-        { _id: studentData._id, activeBorrowCount: { $lt: 6 } }, 
+        { _id: studentData._id, activeBorrowCount: { $lt: 6 } },
         { $inc: { activeBorrowCount: 1 } },
-        { returnDocument: 'after' } 
+        { returnDocument: 'after' }
     );
 
     if (!updatedUser) {
@@ -147,7 +187,7 @@ export const approveBookRequest = asyncErrorHandler(async (req, res, next) => {
     const book = await bookModel.findOneAndUpdate(
         { _id: bookData._id, quantity: { $gt: 0 } },
         { $inc: { quantity: -1 } },
-        { returnDocument: 'after' } 
+        { returnDocument: 'after' }
     );
 
     if (!book) {
@@ -165,7 +205,7 @@ export const approveBookRequest = asyncErrorHandler(async (req, res, next) => {
         branch: studentData.branch,
         price: book.price,
         issueDate: new Date(),
-        dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), 
+        dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
         status: 'approved'
     });
 
@@ -193,7 +233,7 @@ export const approveBookRequest = asyncErrorHandler(async (req, res, next) => {
     res.status(200).json({
         success: true,
         message: "Book successfully issued and catalog updated.",
-        issueDetail: finalIssue 
+        issueDetail: finalIssue
     });
 });
 
@@ -235,7 +275,7 @@ export const requestReturnBook = asyncErrorHandler(async (req, res, next) => {
 
 export const approveReturnRequest = asyncErrorHandler(async (req, res, next) => {
     const issueId = req.params.id;
-    
+
     // 1. Fetch the Issue record
     const issueRecord = await issueModel.findById(issueId);
 
@@ -243,20 +283,20 @@ export const approveReturnRequest = asyncErrorHandler(async (req, res, next) => 
 
     const today = new Date();
 
-   
+
     const fineAmount = calculateFine({
         dueDate: issueRecord.dueDate,
         returnDate: today,
-        finePerDay: 5,  
-        graceDays: 0,    
-        maxFine: 1000,  
+        finePerDay: 5,
+        graceDays: 0,
+        maxFine: 1000,
         chargePartialDay: true
     });
 
     // 3. Update Issue Record Status & Fine Data
     issueRecord.status = "returned";
     issueRecord.returnDate = today;
-    issueRecord.fine = fineAmount; 
+    issueRecord.fine = fineAmount;
     await issueRecord.save();
 
     // 4. ATOMIC: Book Quantity Increase (+1)
@@ -268,25 +308,25 @@ export const approveReturnRequest = asyncErrorHandler(async (req, res, next) => 
     // 6. User Profile Sync (Remove from issueBooks array)
     await userModel.findByIdAndUpdate(
         issueRecord.user,
-        { 
-            $pull: { 
-                issueBooks: { 
+        {
+            $pull: {
+                issueBooks: {
                     $or: [
-                        { issueId: issueRecord._id }, 
-                        { bookId: issueRecord.book }  
+                        { issueId: issueRecord._id },
+                        { bookId: issueRecord.book }
                     ]
-                } 
-            } 
+                }
+            }
         }
     );
 
     // 7. Success Response with Fine Details
-    res.status(200).json({ 
-        success: true, 
-        message: fineAmount > 0 
-            ? `Asset received. Late fine of ₹${fineAmount} applied.` 
+    res.status(200).json({
+        success: true,
+        message: fineAmount > 0
+            ? `Asset received. Late fine of ₹${fineAmount} applied.`
             : "Asset received successfully with zero fine.",
-        fine: fineAmount 
+        fine: fineAmount
     });
 });
 

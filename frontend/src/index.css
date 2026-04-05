@@ -1,36 +1,66 @@
 @import "tailwindcss";
-@theme {
-  /* 1. Global Font Families */
-  --font-sans: "Inter", "system-ui", "sans-serif";
-  --font-heading: "Archivo", "sans-serif";
-  --font-mono: "JetBrains Mono", "monospace";
 
-  /* 2. Custom Sizes (Consistency ke liye) */
-  --text-tiny: 0.65rem;   /* 10px */
-  --text-micro: 0.55rem;  /* 8px */
+@theme {
+  /* 1. Designer Typography */
+  --font-sans: "Space Grotesk", sans-serif; 
+  /* Saira Stencil ko Heading font banaya hai */
+  --font-heading: "Saira Stencil One", system-ui;
+  --font-mono: "Fira Code", monospace;
+
+  /* 2. Brand Colors */
+  --color-primary: #14D3BC;          
+  --color-dark: #07090D;             
   
-  /* 3. Custom Spacing */
-  --tracking-ultra: 0.3em;
+  /* 3. Custom Sizes */
+  --text-tiny: 0.625rem;  
 }
 
 @layer base {
-  /* Google Fonts Import */
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Archivo:wght@800;900&family=JetBrains+Mono:wght@700&display=swap');
+  /* Google Fonts Import: Saira Stencil One (Headings) & Space Grotesk (Body) */
+  @import url('https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 
   body {
-    @apply font-sans antialiased text-slate-900 bg-[#F8FAFC];
-    /* Mobile Bouncing Block */
-    overscroll-behavior-y: none;
-    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    @apply font-sans bg-[#F9FAFB] text-dark;
   }
 
-  /* Sabhi Headings ke liye default style */
-  h1, h2, h3 {
-    @apply font-heading tracking-tighter uppercase;
+  /* Headings: Saira Stencil One. 
+     Note: Is font ka nature 'Bold' hota hai, isme font-weight change nahi hota.
+  */
+  h1, h2, h3, h4 {
+    font-family: "Saira Stencil One", sans-serif;
+    @apply tracking-wider uppercase leading-tight;
+  }
+
+  /* Buttons & Inputs Transitions */
+  button, input {
+    @apply transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)];
   }
 }
 
-/* Custom Scrollbar Hide */
-.custom-scrollbar::-webkit-scrollbar {
-  display: none;
+@layer components {
+  /* Premium Design Components */
+  
+  .registry-card {
+    @apply bg-white border border-slate-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] 
+           hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] 
+           hover:border-primary/20 rounded-[2.2rem] transition-all duration-500;
+  }
+
+  .btn-action {
+    @apply bg-dark text-white hover:bg-primary hover:text-dark 
+           font-heading tracking-[0.1em] text-[11px] 
+           px-6 py-3.5 rounded-2xl active:scale-95 transition-all;
+  }
+}
+
+/* Page Load Animation */
+.page-reveal {
+  animation: revealEffect 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes revealEffect {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
 }

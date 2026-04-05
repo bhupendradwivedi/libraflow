@@ -8,9 +8,14 @@ const issueService = {
     },
 
     getMyBookRequests: async () => {
-        const { data } = await axiosInstance.get('/provide/my-requests ');
+        const { data } = await axiosInstance.get('/issues/my-requests ');
         return data;
     },
+     getMyApprovedBookRequests: async () => {
+        const { data } = await axiosInstance.get('/issues/my-approvedBook-requests ');
+        return data;
+    },
+
 
     requestReturn: async (issueId) => {
         const { data } = await axiosInstance.put(`/issues/book/return-request/${issueId}`);

@@ -8,13 +8,15 @@ import {
     requestReturnBook,      
     approveReturnRequest,    
     getAllPendingRequestsAdmin,
-    getPendingRequests
+    getPendingRequests,
+    getMyApprovedBookRequests
 } from '../controllers/issueController.js';
+
 
 
 const router = express.Router();
 
-// ================= STUDENT ROUTES =================
+//  STUDENT ROUTES 
 
 // 1. Book Issue ki request bhejta hai student
 router.post('/book/request/:id', authMiddleware, recordIssueBooks);
@@ -26,7 +28,11 @@ router.put('/book/return-request/:id', authMiddleware, requestReturnBook);
 // 3. Student apni sari requests (Pending/Approved) dekh sake
 router.get('/my-requests', authMiddleware,getPendingRequests);
 
-// ================= ADMIN ROUTES =================
+//
+
+router.get("/my-approvedBook-requests" ,authMiddleware,getMyApprovedBookRequests)
+
+// ADMIN ROUTES 
 
 // 4. Pending Issue Requests dekhna (The Queue)
 router.get('/admin/requests', authMiddleware, roleMiddleware('admin'),getAllPendingRequestsAdmin );

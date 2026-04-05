@@ -14,7 +14,7 @@ const IssuedBooks = () => {
   const fetchMyBooks = async () => {
     try {
       setLoading(true);
-      const res = await issueService.getMyBookRequests(); 
+      const res = await issueService.getMyApprovedBookRequests(); 
       if (res.success) {
         const activeIssues = res.requests.filter(req => 
           req.status === 'approved' || req.status === 'return_requested'

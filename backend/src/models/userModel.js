@@ -96,21 +96,31 @@ const userSchema = new mongoose.Schema({
 
 
 }, { timestamps: true });
+// access token
 
-userSchema.methods.generateVerificationCode = function () {
-
-    const generateVerificationCode = Math.floor(100000 + Math.random() * 900000);
-    this.verificationCode = generateVerificationCode;
-    this.verificationCodeExpires = Date.now() + 10 * 60 * 1000;
-    return generateVerificationCode;
-
-
-}
 userSchema.methods.generateAuthToken = function () {
     return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRE,
+    
+        expiresIn: process.env.JWT_EXPIRE || '15m', 
     });
-}
+};
+
+//  Refresh Token
+userSchema.methods.generateRefreshToken = function () {
+    return jwt.sign({ id: this._id }, process.env.REFRESH_TOKEN_SECRET, {
+        expiresIn: '7d', 
+    });
+};
+
+// 3. OTP Generation (Same as before)
+userSchema.methods.generateVerificationCode = function () {
+    const verificationCode = Math.floor(100000 + Math.random() * 900000);
+    this.verificationCode = verificationCode;
+    this.verificationCodeExpires = Date.now() + 10 * 60 * 1000;
+    return verificationCode;
+};
+
+// 4. Password Reset Token (Same as before)
 userSchema.methods.generateResetPasswordToken = function () {
     const resetToken = crypto.randomBytes(20).toString('hex');
     this.resetPasswordToken = crypto
@@ -119,7 +129,6 @@ userSchema.methods.generateResetPasswordToken = function () {
         .digest('hex');
     this.resetPasswordExpires = Date.now() + 60 * 60 * 1000;
     return resetToken;
-
-}
+};
 
 export const userModel = mongoose.model('User', userSchema);

@@ -106,30 +106,6 @@ export const deleteStudent = asyncErrorHandler(async (req, res, next) => {
     });
 });
 
-export const getMyApprovedBookRequests = asyncErrorHandler(async (req, res, next) => {
-    // 1. Logged in user ki ID nikalna (Auth middleware se)
-    const studentId = req.user._id;
-
-   
-    const requests = await issueModel.find({ user: studentId })
-        .populate({
-            path: 'book',
-            select: 'title author image isbn price issueDate dueDate' 
-        })
-        .sort({ createdAt: -1 }); 
-   
-    if (!requests) {
-        return res.status(200).json({
-            success: true,
-            requests: []
-        });
-    }
-
-    res.status(200).json({
-        success: true,
-        requests
-    });
-});
 
 
 export const getAdminReturnRequests = asyncErrorHandler(async (req, res, next) => {
@@ -159,3 +135,22 @@ export const getAdminReturnRequests = asyncErrorHandler(async (req, res, next) =
         requests: requestsWithFine
     });
 });
+
+ export const deleteUnverifiedUsers = async (req, res) => {
+  try {
+    
+    const result = await userModel.deleteMany({ accountVerified: false });
+
+    return res.status(200).json({
+      success: true,
+      message: `${result.deletedCount} unverified users deleted successfully.`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Server Error: Could not delete users",
+      error: error.message
+    });
+  }
+};

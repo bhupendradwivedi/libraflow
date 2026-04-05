@@ -20,19 +20,22 @@ const Register = () => {
 
   const { register, isActionLoading } = useContext(AuthContext); 
   const navigate = useNavigate();
-
 const handleRegister = async (e) => {
     e.preventDefault();
     if (isActionLoading) return; 
+
     try {
         const data = await register(userData);
         if (data?.success) {
-            toast.success("OTP sent! Check your mail.");
+  
+            toast.success(data.message || "OTP sent! Check your mail.");
             navigate('/verify-otp', { state: { email: userData.email } });
         }
     } catch (error) {
-      
-        const errMsg = error.response?.data?.message || "Server Busy. Try again.";
+        const errMsg = error.response?.data?.message || "Something went wrong. Try again.";
+        
+        console.error("Registration Error:", errMsg);
+        
         toast.error(errMsg);
     }
 };

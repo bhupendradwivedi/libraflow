@@ -1,8 +1,8 @@
 import axiosInstance from "../api/axiosInstance";
 
 const userService = {
-  // 1. Get all students
-  // URL: /api/provide/admin/all-students
+  // Get all students
+  //  /api/provide/admin/all-students
   getAllStudents: async () => {
     try {
       const response = await axiosInstance.get(`/provide/admin/all-students`);
@@ -12,7 +12,7 @@ const userService = {
     }
   },
 
-  // 2. Update Student Status (Approve/Reject)
+  //  Update Student Status (Approve/Reject)
   // URL: /api/provide/admin/update-status/:id
   // Usage: approveStudent(id, 'approved') or approveStudent(id, 'rejected')
   approveStudent: async (id, status = 'approved') => {
@@ -24,8 +24,8 @@ const userService = {
     }
   },
 
-  // 3. Delete student account
-  // URL: /api/provide/student/:id
+  //  Delete student account
+  //  /api/provide/student/:id
   deleteStudent: async (id) => {
     try {
       const response = await axiosInstance.delete(`/provide/student/${id}`);
@@ -34,9 +34,19 @@ const userService = {
       throw error.response?.data || error.message;
     }
   },
+ 
+//  /api/provide/
+deleteUnverifiedStudents: async () => {
+  try {
+    const response = await axiosInstance.delete(`/provide/admin/delete-unverified`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+},
 
-  // 4. Get Dashboard Statistics
-  // URL: /api/provide/admin/dashboard-stats
+//  Get Dashboard Statistics
+ // URL: /api/provide/admin/dashboard-stats
   getDashboardStats: async () => {
     try {
       const { data } = await axiosInstance.get('/provide/admin/dashboard-stats');

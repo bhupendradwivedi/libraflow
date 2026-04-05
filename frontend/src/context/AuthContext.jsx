@@ -1,47 +1,50 @@
-import React, { createContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect, useCallback } from "react";
 import authService from "../services/authService";
+import { setMemoryToken } from "../api/axiosInstance";
 import { toast } from "react-hot-toast";
 
 export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // Initial Page Load Loader
-  const [isActionLoading, setIsActionLoading] = useState(false); // Button Spinner Loader
+  const [loading, setLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
-  // --- 1. SESSION VERIFICATION ---
-  useEffect(() => {
-    const verifyUser = async () => {
-      const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-      if (!isLoggedIn) {
-        setUser(null);
-        setLoading(false);
-        return; 
-      }
-
-      try {
-        const data = await authService.getUser();
-        if (data?.success) {
-          setUser(data.user);
-        } else {
-          handleLocalCleanup();
-        }
-      } catch (error) {
-        handleLocalCleanup();
-        console.error("Session verification failed");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    verifyUser();
+  // --- Pehle Cleanup Function Define Karein (ReferenceError Fix) ---
+  const handleLocalCleanup = useCallback(() => {
+    setMemoryToken(null);
+    setUser(null);
+    localStorage.removeItem("isLoggedIn");
   }, []);
 
-  const handleLocalCleanup = () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("token");
-    setUser(null);
-  };
+  const verifyUser = useCallback(async () => {
+    
+    if (localStorage.getItem("isLoggedIn") !== "true") {
+        setLoading(false);
+        return;
+    }
+
+    try {
+        const data = await authService.refresh();
+        
+        if (data?.success) {
+          
+            setMemoryToken(data.accessToken);
+            setUser(data.user);
+        } else {
+            handleLocalCleanup();
+        }
+    } catch (error) {
+      
+        handleLocalCleanup();
+    } finally {
+      
+        setLoading(false);
+    }
+}, [handleLocalCleanup]);
+  useEffect(() => {
+    verifyUser();
+  }, [verifyUser]);
 
   // --- 2. REGISTER LOGIC ---
   const register = async (userData) => {
@@ -60,12 +63,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // --- 3. VERIFY OTP ---
+  // --- 3. VERIFY OTP (Updated Logic) ---
   const verifyOtp = async (email, otp) => {
     setIsActionLoading(true);
     try {
       const data = await authService.verifyOtp(email, otp);
       if (data?.success) {
+        // IMPORTANT: Verify hote hi login wala logic hona chahiye
+        if (data.accessToken) {
+          setMemoryToken(data.accessToken);
+          setUser(data.user);
+        }
         toast.success("Account verified successfully!");
       }
       return data;
@@ -94,45 +102,39 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // --- 5. LOGIN LOGIC (Cleaned Up) ---
-  const login = async (email, password) => {
-    setIsActionLoading(true);
-    try {
-      const data = await authService.login(email, password);
-      
-      if (data?.success) {
-        localStorage.setItem("token", data.token); 
-        localStorage.setItem("isLoggedIn", "true");
-        setUser(data.user);
-        toast.success(`Welcome back, ${data.user.name}!`);
-        return data; // Success return
-      } else {
-        // Agar backend error message bhej raha hai par success true nahi hai
-        toast.error(data?.message || "Invalid Email or Password");
-        return data;
-      }
-    } catch (error) {
-      // Axios errors usually come here
-      const errorMsg = error.response?.data?.message || error.message || "Login failed";
-      toast.error(errorMsg);
-      throw error;
-    } finally {
-      setIsActionLoading(false);
+  // --- 5. LOGIN LOGIC ---
+const login = async (email, password) => {
+  setIsActionLoading(true);
+  try {
+    const data = await authService.login(email, password);
+    if (data?.success) {
+      setMemoryToken(data.accessToken);
+      setUser(data.user);
+      localStorage.setItem("isLoggedIn", "true"); 
+
+      toast.success(`Welcome back, ${data.user.name}!`);
+      return data;
     }
-  };
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Login failed");
+    throw error;
+  } finally {
+    setIsActionLoading(false);
+  }
+};
 
   // --- 6. LOGOUT LOGIC ---
   const logout = async () => {
-    setIsActionLoading(true); 
+    setIsActionLoading(true);
     try {
       await authService.logout();
     } catch (error) {
-      console.error("Logout API failed, cleaning up locally");
+      console.error("Logout error:", error);
     } finally {
-      handleLocalCleanup();
+      setMemoryToken(null);
+      setUser(null);
       toast.success("Logged out successfully");
       setIsActionLoading(false);
-      window.location.href = "/login";
     }
   };
 
