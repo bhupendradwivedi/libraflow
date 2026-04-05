@@ -8,7 +8,7 @@ export const setMemoryToken = (token) => {
 };
 
 const axiosInstance = axios.create({
-    baseURL: "https://libraflow-qzzb.onrender.com", 
+    baseURL: "https://libraflow-qzzb.onrender.com/api", 
     withCredentials: true,
 });
 
