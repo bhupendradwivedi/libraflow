@@ -4,20 +4,21 @@ export const sendEmail = async ({ email, subject, message }) => {
     try {
         const transporter = nodeMailer.createTransport({
             host: "smtp.gmail.com",
-            port: 465, 
-            secure: true,
+          
+            port: 587, 
+          
+            secure: false, 
             auth: {
                 user: process.env.SMTP_MAIL,
                 pass: process.env.SMTP_PASSWORD, 
             },
-          
-            connectionTimeout: 30000,
-            greetingTimeout: 30000,
-            socketTimeout: 30000,
-            dnsTimeout: 30000,
+           
+            connectionTimeout: 10000,
+            socketTimeout: 10000,
             tls: {
-              
-                rejectUnauthorized: false 
+                // This helps bypass issues with Render's shared IP certificates
+                rejectUnauthorized: false,
+                minVersion: 'TLSv1.2'
             }
         });
 
@@ -28,7 +29,7 @@ export const sendEmail = async ({ email, subject, message }) => {
             html: message,
         };
 
-        
+        // Standard verify check
         await transporter.verify(); 
         
         const info = await transporter.sendMail(mailOptions);
